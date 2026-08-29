@@ -1,0 +1,21 @@
+id = "sunznx.lazygit-popup"
+name = "Lazygit Popup"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Open lazygit in a popup rooted at the triggering pane's current directory."
+platforms = ["macos"]
+
+[[panes]]
+id = "lazygit"
+title = "Lazygit"
+placement = "popup"
+width = "80%"
+height = "80%"
+command = ["lazygit"]
+
+[[actions]]
+id = "open"
+title = "Open lazygit"
+description = "Open lazygit in the triggering pane's current directory"
+contexts = ["workspace"]
+command = ["bash", "open.sh"]
