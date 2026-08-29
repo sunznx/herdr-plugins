@@ -1,0 +1,20 @@
+id = "sunznx.yazi-fzf-popup"
+name = "Yazi FZF Popup"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Open Yazi in the current pane's directory and enter its built-in fzf interface."
+platforms = ["macos"]
+
+[[actions]]
+id = "open"
+title = "Open Yazi fzf"
+contexts = ["workspace"]
+command = ["bash", "open.sh"]
+
+[[panes]]
+id = "browser"
+title = "Yazi fzf"
+placement = "popup"
+width = "80%"
+height = "80%"
+command = ["bash", "-c", "exec \"${SHELL:-/bin/zsh}\" -ic 'exec \"$HERDR_PLUGIN_ROOT/launch.sh\"'"]

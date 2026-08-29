@@ -12,7 +12,7 @@ Pops [Yazi](https://yazi-rs.github.io/) open over whichever pane you triggered i
 ## Quick start
 
 ```bash
-herdr plugin install alastairsounds/herdr-plugins/yazi-popup
+herdr plugin install sunznx/herdr-plugins/yazi-popup
 ```
 
 Add a keybinding in `~/.config/herdr/config.toml`:
@@ -31,3 +31,7 @@ Reload (`herdr server reload-config`), then press the key: Yazi opens in a cente
 
 - macOS (Linux/Windows support untested)
 - Yazi
+
+## Credits
+
+Originally created in [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup). This fork keeps the original plugin and changes its Yazi launch path to use the user's interactive shell.

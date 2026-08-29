@@ -1,13 +1,6 @@
-# Demo-only config: just enough to show each plugin working. Isolated via
+# Demo-only config for yazi-popup. Isolated via
 # XDG_CONFIG_HOME (see root justfile) so this never touches your real
 # ~/.config/herdr/config.toml.
-
-# herdr-starship: sidebar renders $starship on workspace focus.
-[ui.sidebar.spaces]
-rows = [
-  ["state_icon", "workspace", "$num"],
-  ["$starship"]
-]
 
 # yazi-popup: direct binding, not the README's "prefix+cmd+p" -- VHS can
 # only send Ctrl+<key> combos (no function keys, no alt/cmd), and that

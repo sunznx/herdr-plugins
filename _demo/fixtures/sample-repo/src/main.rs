@@ -1,3 +1,3 @@
 fn main() {
-    println!("hello from the herdr-starship demo repo");
+    println!("hello from the yazi-popup demo repo");
 }

@@ -1,0 +1,24 @@
+id = "sunznx.open-in"
+name = "Open In"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Open the triggering pane's current directory in Emacs, IntelliJ IDEA, or Fork."
+platforms = ["macos"]
+
+[[actions]]
+id = "open-in-emacs"
+title = "Open current directory in Emacs"
+contexts = ["workspace"]
+command = ["bash", "open.sh", "Emacs"]
+
+[[actions]]
+id = "open-in-idea"
+title = "Open current directory in IntelliJ IDEA"
+contexts = ["workspace"]
+command = ["bash", "open.sh", "IntelliJ IDEA"]
+
+[[actions]]
+id = "open-in-fork"
+title = "Open current directory in Fork"
+contexts = ["workspace"]
+command = ["bash", "open.sh", "Fork"]
