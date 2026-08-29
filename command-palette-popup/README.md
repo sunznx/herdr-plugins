@@ -1,6 +1,6 @@
 # command-palette-popup
 
-A centered [fzf](https://github.com/junegunn/fzf) command palette for [Herdr](https://herdr.dev).
+An [fzf](https://github.com/junegunn/fzf) command palette shown in a temporary [Herdr](https://herdr.dev) overlay.
 
 The list combines:
 

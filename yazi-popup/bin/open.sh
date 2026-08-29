@@ -37,22 +37,4 @@ case "$mode" in
     ;;
 esac
 
-herdr_bin="${HERDR_BIN_PATH:-herdr}"
-attempt=0
-while true; do
-  if output="$("$herdr_bin" "${args[@]}" 2>&1)"; then
-    [ -z "$output" ] || printf '%s\n' "$output"
-    exit 0
-  else
-    status=$?
-  fi
-
-  attempt=$((attempt + 1))
-  if [[ "$output" == *"popup already open"* ]] && [ "$attempt" -lt 20 ]; then
-    sleep 0.05
-    continue
-  fi
-
-  printf '%s\n' "$output" >&2
-  exit "$status"
-done
+exec "${HERDR_BIN_PATH:-herdr}" "${args[@]}"

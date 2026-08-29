@@ -1,6 +1,6 @@
 id = "sunznx.yazi-popup"
 name = "Yazi Popup"
-version = "0.2.1"
+version = "0.2.2"
 min_herdr_version = "0.8.0"
 description = "Open Yazi popups for file picking, fzf navigation, rg content search, and .trellis browsing."
 platforms = ["macos"]
@@ -11,7 +11,7 @@ title = "Yazi Picker"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "bin/picker.sh"]
+command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/picker.sh\""]
 
 [[panes]]
 id = "fzf"
@@ -19,7 +19,7 @@ title = "Yazi fzf"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "bin/browser.sh", "fzf"]
+command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/browser.sh\" fzf"]
 
 [[panes]]
 id = "rg"
@@ -27,7 +27,7 @@ title = "Yazi rg"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "bin/browser.sh", "rg"]
+command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/browser.sh\" rg"]
 
 [[panes]]
 id = "trellis"
@@ -35,7 +35,7 @@ title = "Trellis"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "bin/browser.sh", "trellis"]
+command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/browser.sh\" trellis"]
 
 [[actions]]
 id = "pick"

@@ -21,19 +21,6 @@ set -uo pipefail
 herdr_bin="${HERDR_BIN_PATH:-herdr}"
 self_plugin="${HERDR_PLUGIN_ID:-sunznx.command-palette-popup}"
 
-# Self-close on exit, no matter how we get there (cancel, dispatch, or die()).
-# `popup` placement (unlike `overlay`) does not reliably tear its own pane down
-# when its command exits — observed leaving an empty shell behind in testing —
-# so we close ourselves explicitly instead of assuming the placement does it.
-# $HERDR_PANE_ID is herdr's own env var for "the pane this process is running
-# in" (here: the popup itself, never the origin pane captured in $pane below).
-self_pane="${HERDR_PANE_ID:-}"
-close_self() {
-  [ -n "$self_pane" ] || return 0
-  "$herdr_bin" plugin pane close "$self_pane" >/dev/null 2>&1 || true
-}
-trap close_self EXIT
-
 die() {
   printf '%s\n' "$*" >&2
   printf 'Press any key to close…' >&2
@@ -445,12 +432,6 @@ invoke_plugin_action() {
   resp="$("$herdr_bin" plugin action invoke "$action_id" 2>&1)"; rc=$?
   [ $rc -eq 0 ] || die "command-palette-popup: failed to invoke ${action_id}
 ${resp}"
-
-  # Yazi actions open another popup. Leave this popup immediately so their
-  # short retry loop can take over once our EXIT trap closes the palette.
-  case "$action_id" in
-    sunznx.yazi-popup.*) return 0 ;;
-  esac
 
   log_id="$(printf '%s' "$resp" | jq -r '.result.log.log_id // empty' 2>/dev/null)"
   plugin_id="$(printf '%s' "$resp" | jq -r '.result.log.plugin_id // empty' 2>/dev/null)"
