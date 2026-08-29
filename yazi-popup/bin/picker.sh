@@ -2,6 +2,11 @@
 # Types picks back as "@path " with no trailing Enter, like a real @ autocomplete.
 set -eo pipefail
 
+if [ -z "${FZF_DEFAULT_OPTS_FILE:-}" ]; then
+  fzf_opts_file="${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzfrc"
+  [ ! -f "$fzf_opts_file" ] || export FZF_DEFAULT_OPTS_FILE="$fzf_opts_file"
+fi
+
 pane_id="${HERDR_TARGET_PANE_ID:-}"
 [ -n "$pane_id" ] || exit 0
 

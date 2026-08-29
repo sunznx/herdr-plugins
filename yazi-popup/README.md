@@ -1,37 +1,56 @@
 # yazi-popup
 
-Pops [Yazi](https://yazi-rs.github.io/) open over whichever pane you triggered it from, and types your pick(s) back into that pane as `@path`; unsubmitted, like a real `@` autocomplete. Built for referencing files to coding agents (Claude, Codex, etc.) without leaving the keyboard.
+Open [Yazi](https://yazi-rs.github.io/) over the triggering Herdr pane with four focused workflows:
+
+| Action | Behavior |
+| --- | --- |
+| `sunznx.yazi-popup.pick` | Pick files and type them back into the triggering pane as unsubmitted `@path` references. |
+| `sunznx.yazi-popup.fzf` | Open Yazi in the current directory and immediately enter its built-in fzf file navigator. |
+| `sunznx.yazi-popup.rg` | Open Yazi in the current directory and immediately prompt for an `rg` content search. |
+| `sunznx.yazi-popup.trellis` | Open the current directory's `.trellis` folder with filenames sorted naturally in reverse order. |
 
 ![Picking a file in the popup, typed back as @path into the composer](../_demo/yazi-popup/picker.gif)
 
-## What it does
+Yazi loads the user's normal configuration without starting another interactive shell. Existing `FZF_DEFAULT_OPTS` and `FZF_DEFAULT_OPTS_FILE` values are preserved; when `FZF_DEFAULT_OPTS_FILE` is unset, the plugin automatically uses `${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzfrc` if that file exists.
 
-- `[[panes]] picker`: a `popup`-placement pane (80% width/height) that starts `bin/picker.sh` through the user's interactive `$SHELL`, then runs Yazi with `--chooser-file` and, once you pick (or quit), types the result back and exits, closing the popup. This makes exported shell settings such as `FZF_DEFAULT_OPTS_FILE` available to Yazi and the tools it launches.
-- `[[actions]] pick`: `bin/open.sh` reads the triggering pane's id and cwd from herdr's plugin context, then opens the `picker` popup there via `herdr plugin pane open`, passing the target pane id through `--env`.
+## Requirements
 
-## Quick start
+- Herdr ≥ 0.8.0
+- Yazi
+- `fzf` for the `fzf` action
+- `rg` for the `rg` action
+- A `.trellis` directory for the `trellis` action
+
+## Install
 
 ```bash
 herdr plugin install sunznx/herdr-plugins/yazi-popup
 ```
 
-Add a keybinding in `~/.config/herdr/config.toml`:
+Example keybindings for `~/.config/herdr/config.toml`:
 
 ```toml
 [[keys.command]]
-key = "prefix+cmd+p"
+key = "prefix+f"
 type = "plugin_action"
-command = "alastairsounds.yazi-popup.pick"
-description = "pick a file with yazi"
+command = "sunznx.yazi-popup.fzf"
+description = "Open Yazi fzf"
+
+[[keys.command]]
+key = "prefix+r"
+type = "plugin_action"
+command = "sunznx.yazi-popup.rg"
+description = "Search contents with rg in Yazi"
+
+[[keys.command]]
+key = "prefix+t"
+type = "plugin_action"
+command = "sunznx.yazi-popup.trellis"
+description = "Open .trellis in Yazi"
 ```
 
-Reload (`herdr server reload-config`), then press the key: Yazi opens in a centered popup over your current pane, cd'd into that pane's directory. Pick one or more files (or quit with `q`/`ctrl+c`) and the popup closes, typing `@path ` for each pick into the pane you started from.
-
-## Requirements
-
-- macOS (Linux/Windows support untested)
-- Yazi
+Reload the Herdr configuration after installing or changing keybindings.
 
 ## Credits
 
-Originally created in [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup). This fork keeps the original plugin and changes its Yazi launch path to use the user's interactive shell.
+The original popup picker was created in [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup). This fork adds the `fzf`, `rg`, and `trellis` workflows, uses the `sunznx.yazi-popup` plugin ID, and avoids interactive-shell startup latency.

@@ -8,5 +8,5 @@
 [[keys.command]]
 key = "ctrl+p"
 type = "plugin_action"
-command = "alastairsounds.yazi-popup.pick"
+command = "sunznx.yazi-popup.pick"
 description = "pick a file with yazi"

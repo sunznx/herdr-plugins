@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Opens the picker popup over the pane that triggered the keybind.
 set -eo pipefail
 
 extract_cwd() {
@@ -13,11 +12,29 @@ if [ "${1:-}" = "--self-test" ]; then
   exit 0
 fi
 
-[ -n "${HERDR_PANE_ID:-}" ] || exit 0
-
+mode="${1:-pick}"
+plugin_id="${HERDR_PLUGIN_ID:-sunznx.yazi-popup}"
 cwd=$(extract_cwd "${HERDR_PLUGIN_CONTEXT_JSON:-{}}")
 
-args=(plugin pane open --plugin "$HERDR_PLUGIN_ID" --entrypoint picker --env "HERDR_TARGET_PANE_ID=$HERDR_PANE_ID")
-[ -n "$cwd" ] && args+=(--cwd "$cwd")
+case "$mode" in
+  pick)
+    [ -n "${HERDR_PANE_ID:-}" ] || exit 0
+    args=(plugin pane open --plugin "$plugin_id" --entrypoint picker --env "HERDR_TARGET_PANE_ID=$HERDR_PANE_ID")
+    [ -n "$cwd" ] && args+=(--cwd "$cwd")
+    ;;
+  fzf|rg)
+    [ -n "$cwd" ] && [ -d "$cwd" ] || { echo "yazi-popup: current pane directory is unavailable." >&2; exit 1; }
+    args=(plugin pane open --plugin "$plugin_id" --entrypoint "$mode" --focus --cwd "$cwd")
+    ;;
+  trellis)
+    trellis_dir="$cwd/.trellis"
+    [ -n "$cwd" ] && [ -d "$trellis_dir" ] || { echo "yazi-popup: '$trellis_dir' does not exist." >&2; exit 1; }
+    args=(plugin pane open --plugin "$plugin_id" --entrypoint trellis --focus --cwd "$trellis_dir")
+    ;;
+  *)
+    echo "yazi-popup: unsupported mode '$mode'." >&2
+    exit 1
+    ;;
+esac
 
 exec "${HERDR_BIN_PATH:-herdr}" "${args[@]}"
