@@ -22,7 +22,7 @@ case "$mode" in
     args=(plugin pane open --plugin "$plugin_id" --entrypoint picker --env "HERDR_TARGET_PANE_ID=$HERDR_PANE_ID")
     [ -n "$cwd" ] && args+=(--cwd "$cwd")
     ;;
-  fzf|rg)
+  rg)
     [ -n "$cwd" ] && [ -d "$cwd" ] || { echo "yazi-popup: current pane directory is unavailable." >&2; exit 1; }
     args=(plugin pane open --plugin "$plugin_id" --entrypoint "$mode" --focus --cwd "$cwd")
     ;;

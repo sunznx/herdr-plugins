@@ -1,8 +1,8 @@
 id = "sunznx.yazi-popup"
 name = "Yazi Popup"
-version = "0.2.2"
+version = "0.3.0"
 min_herdr_version = "0.8.0"
-description = "Open Yazi popups for file picking, fzf navigation, rg content search, and .trellis browsing."
+description = "Open Yazi popups for file picking, real-time rg content search, and .trellis browsing."
 platforms = ["macos"]
 
 [[panes]]
@@ -14,16 +14,8 @@ height = "80%"
 command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/picker.sh\""]
 
 [[panes]]
-id = "fzf"
-title = "Yazi fzf"
-placement = "popup"
-width = "80%"
-height = "80%"
-command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/browser.sh\" fzf"]
-
-[[panes]]
 id = "rg"
-title = "Yazi rg"
+title = "Yazi fr"
 placement = "popup"
 width = "80%"
 height = "80%"
@@ -45,16 +37,9 @@ contexts = ["workspace"]
 command = ["bash", "bin/open.sh", "pick"]
 
 [[actions]]
-id = "fzf"
-title = "Open Yazi fzf"
-description = "Open Yazi and immediately enter its built-in fzf file navigator"
-contexts = ["workspace"]
-command = ["bash", "bin/open.sh", "fzf"]
-
-[[actions]]
 id = "rg"
-title = "Search contents with rg in Yazi"
-description = "Open Yazi and immediately prompt for a ripgrep content search"
+title = "Search contents with fr.yazi"
+description = "Open Yazi and immediately enter fr.yazi's real-time rg content search"
 contexts = ["workspace"]
 command = ["bash", "bin/open.sh", "rg"]
 

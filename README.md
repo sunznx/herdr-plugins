@@ -6,7 +6,7 @@ Personal [Herdr](https://herdr.dev) plugins.
 
 | Plugin | Description |
 | --- | --- |
-| [yazi-popup](yazi-popup) | Provides Yazi popups for `@path` picking, fzf navigation, rg content search, and reverse-sorted `.trellis` browsing. |
+| [yazi-popup](yazi-popup) | Provides Yazi popups for `@path` picking, `fr.yazi` real-time content search, and reverse-sorted `.trellis` browsing. |
 | [lazygit-popup](lazygit-popup) | Opens lazygit in an `80% × 80%` popup rooted at the triggering pane's directory. |
 | [command-palette-popup](command-palette-popup) | Searches Herdr native commands, live targets, and installed plugin actions from one fzf popup. |
 | [mole-current-dir](mole-current-dir) | Opens a pane and runs `mole analyze .` in the triggering pane's directory. |
@@ -32,6 +32,6 @@ See each plugin's own README for setup details.
 
 ## Credits
 
-- `yazi-popup` originates from [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup) and is extended here with fzf, rg, and `.trellis` workflows.
+- `yazi-popup` originates from [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup) and is extended here with `fr.yazi` real-time rg and `.trellis` workflows.
 - `command-palette-popup` combines ideas and code from [enekos/herdr-quick-actions](https://github.com/enekos/herdr-quick-actions) and [JanTvrdik/herdr-command-palette](https://github.com/JanTvrdik/herdr-command-palette). Their MIT notices are retained in the plugin's [LICENSE](command-palette-popup/LICENSE).
 - `lazygit-popup`, `mole-current-dir`, and `open-in` reuse the Herdr context and pane-launching patterns demonstrated by `yazi-popup`; their task-specific behavior was added in this repository.
