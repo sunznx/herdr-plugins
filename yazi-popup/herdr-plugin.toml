@@ -1,6 +1,6 @@
 id = "sunznx.yazi-popup"
 name = "Yazi Popup"
-version = "0.2.0"
+version = "0.2.1"
 min_herdr_version = "0.8.0"
 description = "Open Yazi popups for file picking, fzf navigation, rg content search, and .trellis browsing."
 platforms = ["macos"]

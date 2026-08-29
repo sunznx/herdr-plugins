@@ -446,6 +446,12 @@ invoke_plugin_action() {
   [ $rc -eq 0 ] || die "command-palette-popup: failed to invoke ${action_id}
 ${resp}"
 
+  # Yazi actions open another popup. Leave this popup immediately so their
+  # short retry loop can take over once our EXIT trap closes the palette.
+  case "$action_id" in
+    sunznx.yazi-popup.*) return 0 ;;
+  esac
+
   log_id="$(printf '%s' "$resp" | jq -r '.result.log.log_id // empty' 2>/dev/null)"
   plugin_id="$(printf '%s' "$resp" | jq -r '.result.log.plugin_id // empty' 2>/dev/null)"
   [ -n "$log_id" ] && [ -n "$plugin_id" ] || return 0
