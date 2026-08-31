@@ -17,7 +17,7 @@ case "$1 $2" in
   "pane read")
     cat "$HERDR_COPY_TEST_FIXTURE"
     ;;
-  "feedback clipboard")
+  "notification show")
     printf 'feedback\n' >> "$HERDR_COPY_TEST_EVENT_LOG"
     [ "${HERDR_COPY_TEST_FEEDBACK_FAIL:-0}" != 1 ]
     ;;
@@ -62,7 +62,7 @@ run_action() {
   : > "$HERDR_COPY_TEST_EVENT_LOG"
   PATH="$runtime_bin" "$script_dir/copy.sh" "$1"
   grep -Fq "pane read $expected_pane_id --source recent-unwrapped --lines 10000 --format text" "$HERDR_COPY_TEST_HERDR_LOG"
-  grep -Fxq "feedback clipboard" "$HERDR_COPY_TEST_HERDR_LOG"
+  grep -Fxq "notification show copied to clipboard --position top-right --sound none" "$HERDR_COPY_TEST_HERDR_LOG"
   [ "$(cat "$HERDR_COPY_TEST_EVENT_LOG")" = $'clipboard\nfeedback' ]
 }
 
@@ -93,7 +93,7 @@ fi
 unset HERDR_COPY_TEST_CLIPBOARD_FAIL
 assert_clipboard 'unchanged'
 grep -Fxq "pane read w1:p2 --source recent-unwrapped --lines 10000 --format text" "$HERDR_COPY_TEST_HERDR_LOG"
-if grep -Fq "feedback clipboard" "$HERDR_COPY_TEST_HERDR_LOG"; then
+if grep -Fq "notification show" "$HERDR_COPY_TEST_HERDR_LOG"; then
   printf 'expected clipboard failure not to show feedback\n' >&2
   exit 1
 fi
@@ -193,7 +193,7 @@ if "$script_dir/copy.sh" output >/dev/null 2>&1; then
 fi
 assert_clipboard 'unchanged'
 [ ! -s "$HERDR_COPY_TEST_CLIPBOARD_LOG" ]
-if grep -Fq "feedback clipboard" "$HERDR_COPY_TEST_HERDR_LOG"; then
+if grep -Fq "notification show" "$HERDR_COPY_TEST_HERDR_LOG"; then
   printf 'expected parse failure not to show feedback\n' >&2
   exit 1
 fi
