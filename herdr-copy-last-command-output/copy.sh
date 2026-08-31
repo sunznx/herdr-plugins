@@ -3,7 +3,7 @@ set -uo pipefail
 
 mode="${1:-}"
 herdr_bin="${HERDR_BIN_PATH:-herdr}"
-clipboard_bin="${HERDR_COPY_CLIPBOARD_BIN:-pbcopy}"
+clipboard_bin="${HERDR_COPY_CLIPBOARD_BIN:-/usr/bin/pbcopy}"
 
 fail() {
   printf 'herdr-copy-last-command-output: %s\n' "$*" >&2
@@ -11,13 +11,17 @@ fail() {
 }
 
 [ "$mode" = "output" ] || [ "$mode" = "command-and-output" ] || fail "unknown action."
-command -v jq >/dev/null 2>&1 || fail "jq is not installed or not on PATH."
 command -v "$clipboard_bin" >/dev/null 2>&1 || fail "pbcopy is not installed or not on PATH."
 
-pane_id="$(
-  printf '%s' "${HERDR_PLUGIN_CONTEXT_JSON:-}" |
-    jq -r '.focused_pane_id // empty' 2>/dev/null
-)"
+context_json="${HERDR_PLUGIN_CONTEXT_JSON:-}"
+pane_id_pattern='"focused_pane_id"[[:space:]]*:[[:space:]]*"([[:alnum:]_.:-]+)"'
+pane_id=""
+if [[ "$context_json" =~ $pane_id_pattern ]]; then
+  pane_id="${BASH_REMATCH[1]}"
+fi
+if [ -z "$pane_id" ]; then
+  pane_id="${HERDR_PANE_ID:-${HERDR_ACTIVE_PANE_ID:-}}"
+fi
 [ -n "$pane_id" ] || fail "could not resolve the triggering pane."
 
 scrollback="$("$herdr_bin" pane read "$pane_id" --source recent-unwrapped --lines 10000 --format text)" ||
@@ -25,7 +29,7 @@ scrollback="$("$herdr_bin" pane read "$pane_id" --source recent-unwrapped --line
 
 if ! content="$(
   printf '%s\n' "$scrollback" |
-    awk -v mode="$mode" '
+    /usr/bin/awk -v mode="$mode" '
       function trim_left(value) {
         sub(/^[[:space:]]+/, "", value)
         return value
@@ -44,6 +48,16 @@ if ! content="$(
         last = substr(trimmed, length(trimmed), 1)
         if (last == "$" || last == "%" || last == "#" || last == ">") return last
         return ""
+      }
+
+      function command_after_prefix(line, prefix, rest) {
+        if (prefix == "" || index(line, prefix) != 1) return ""
+
+        rest = substr(line, length(prefix) + 1)
+        if (rest !~ /^[[:space:]]/) return ""
+
+        rest = trim_left(rest)
+        return rest
       }
 
       function command_after_prompt(line, marker, remaining, offset, relative, rest) {
@@ -73,16 +87,27 @@ if ! content="$(
         prompt_line = count
         while (prompt_line > 0 && lines[prompt_line] ~ /^[[:space:]]*$/) prompt_line--
 
-        marker = prompt_marker(lines[prompt_line])
-        if (marker == "") exit 2
-
+        prompt_prefix = trim_right(lines[prompt_line])
         command_line = 0
         command = ""
         for (line_number = prompt_line - 1; line_number > 0; line_number--) {
-          command = command_after_prompt(lines[line_number], marker)
+          command = command_after_prefix(lines[line_number], prompt_prefix)
           if (command != "") {
             command_line = line_number
             break
+          }
+        }
+
+        if (command_line == 0) {
+          marker = prompt_marker(lines[prompt_line])
+          if (marker == "") exit 2
+
+          for (line_number = prompt_line - 1; line_number > 0; line_number--) {
+            command = command_after_prompt(lines[line_number], marker)
+            if (command != "") {
+              command_line = line_number
+              break
+            }
           }
         }
         if (command_line == 0) exit 2

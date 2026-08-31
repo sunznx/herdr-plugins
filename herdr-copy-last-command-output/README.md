@@ -27,8 +27,7 @@ description = "Copy last command output"
 
 - Herdr `>= 0.8.0`
 - macOS `pbcopy`
-- `jq`
 
 ## Limitations
 
-Herdr `pane read` exposes terminal text but not shell semantic prompt markers. The plugin therefore identifies the last command from an empty prompt at the bottom of recent scrollback. It supports common `$`, `%`, `#`, `>`, `❯`, and `➜` prompts, including common two-line p10k prompts. Custom prompts, a non-empty current prompt, wrapped or multiline commands, and output that resembles a prompt may not be recognized reliably. When it cannot identify a completed command with non-empty output, it fails without changing the clipboard.
+Herdr `pane read` exposes terminal text but not shell semantic prompt markers. The plugin therefore identifies the last command from an empty prompt at the bottom of recent scrollback. It supports prompts whose stable prefix includes a working directory or Git status, common `$`, `%`, `#`, `>`, `❯`, and `➜` markers, and common two-line p10k prompts. Custom prompts that change between commands, a non-empty current prompt, wrapped or multiline commands, and output that resembles a prompt may not be recognized reliably. When it cannot identify a completed command with non-empty output, it fails without changing the clipboard.
