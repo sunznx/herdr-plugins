@@ -1,0 +1,20 @@
+id = "sunznx.herdr-copy-last-command-output"
+name = "Copy Last Command Output"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Copy the last command output from the triggering pane."
+platforms = ["macos"]
+
+[[actions]]
+id = "copy-last-command-output"
+title = "Copy last command output"
+description = "Copy the previous command's output to the clipboard"
+contexts = ["pane"]
+command = ["bash", "copy.sh", "output"]
+
+[[actions]]
+id = "copy-last-command-and-output"
+title = "Copy last command and output"
+description = "Copy the previous command and its output to the clipboard"
+contexts = ["pane"]
+command = ["bash", "copy.sh", "command-and-output"]
