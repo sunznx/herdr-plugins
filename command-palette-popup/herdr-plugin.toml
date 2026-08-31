@@ -1,6 +1,6 @@
 id = "sunznx.command-palette-popup"
 name = "Command Palette Popup"
-version = "0.2.1"
+version = "0.2.2"
 min_herdr_version = "0.8.0"
 description = "One fzf popup for Herdr native commands, live navigation targets, and actions from installed plugins."
 platforms = ["macos"]

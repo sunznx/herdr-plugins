@@ -1,6 +1,6 @@
 # herdr-move
 
-Move the pane that triggered the action into a new tab in an existing Herdr workspace. Any shell or coding agent running in the pane moves with it; the process is not restarted.
+Move the pane that triggered the action either into a new tab in an existing Herdr workspace or into an existing tab. Any shell or coding agent running in the pane moves with it; the process is not restarted.
 
 The plugin resolves the live pane ID before opening its picker. This avoids passing a stale workspace-qualified pane ID into a popup, where the source pane's inherited caller context is no longer available.
 
@@ -16,7 +16,12 @@ The plugin resolves the live pane ID before opening its picker. This avoids pass
 herdr plugin install sunznx/herdr-plugins/herdr-move
 ```
 
-The action is available as `sunznx.herdr-move.open`. It can be selected from a compatible command palette or bound directly:
+The actions are:
+
+- `sunznx.herdr-move.open` — move the pane into a new tab in an existing workspace.
+- `sunznx.herdr-move.tab` — move the pane into an existing tab, split to the right.
+
+They can be selected from a compatible command palette or bound directly:
 
 ```toml
 [[keys.command]]
@@ -24,6 +29,12 @@ key = "prefix+m"
 type = "plugin_action"
 command = "sunznx.herdr-move.open"
 description = "Move pane to workspace"
+
+[[keys.command]]
+key = "prefix+shift+m"
+type = "plugin_action"
+command = "sunznx.herdr-move.tab"
+description = "Move pane to tab"
 ```
 
 When a shortcut invokes the action without `LIVE_PANE_ID`, the plugin resolves the triggering pane with `herdr pane current --current`. It never falls back to a pane focused by another client.
@@ -31,7 +42,8 @@ When a shortcut invokes the action without `LIVE_PANE_ID`, the plugin resolves t
 ## Development
 
 ```bash
-bash -n open.sh move.sh test.sh
+bash -n open.sh move.sh move-to-tab.sh test.sh
 ./open.sh --self-test
 ./move.sh --self-test
+./move-to-tab.sh --self-test
 ```

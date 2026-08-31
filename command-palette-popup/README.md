@@ -8,11 +8,12 @@ The list combines:
 - live targets for open tabs, workspaces, agents, and unopened worktrees
 - actions exposed by every installed Herdr plugin
 - effective Herdr keybindings for native commands
-- a `Move pane to workspace…` flow that keeps the source pane's live ID
+- `Move pane to workspace…`, `Move pane to tab…`, and `Rename pane and agent…`
+  flows that keep the source pane's live ID
 
 Native commands and plugin actions are ranked by usage frequency and recency. Plugin action failures are read from the Herdr action log and shown before the popup closes.
 
-The `open` action resolves the triggering pane before creating the popup. The popup is a session-modal terminal, not a movable Herdr pane, and its authoritative `HERDR_PLUGIN_CONTEXT_JSON` still identifies the tiled pane underneath it. Pane moves therefore cannot accidentally move the command palette itself. Workspace selection happens inside the existing popup, so it never tries to open a second popup.
+The `open` action resolves the triggering pane before creating the popup. The popup is a session-modal terminal, not a movable Herdr pane, and its authoritative `HERDR_PLUGIN_CONTEXT_JSON` still identifies the tiled pane underneath it. Pane moves and renames therefore cannot target the command palette itself. Their nested selection or input happens inside the existing popup, so the palette never tries to open a second popup.
 
 The popup starts through the interactive `${SHELL:-/bin/zsh}`, so exported settings such as `FZF_DEFAULT_OPTS_FILE` are available to fzf.
 

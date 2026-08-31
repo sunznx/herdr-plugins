@@ -3,23 +3,16 @@ set -uo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 herdr_bin="${HERDR_BIN_PATH:-herdr}"
-plugin_id="${HERDR_PLUGIN_ID:-sunznx.herdr-move}"
-mode="${1:-workspace}"
+plugin_id="${HERDR_PLUGIN_ID:-sunznx.herdr-rename}"
 
-if [ "$mode" = "--self-test" ]; then
+if [ "${1:-}" = "--self-test" ]; then
   exec "$script_dir/test.sh" open
 fi
 
 fail() {
-  printf 'herdr-move: %s\n' "$*" >&2
+  printf 'herdr-rename: %s\n' "$*" >&2
   exit 1
 }
-
-case "$mode" in
-  workspace) entrypoint="picker" ;;
-  tab) entrypoint="tab-picker" ;;
-  *) fail "unknown picker mode '$mode'." ;;
-esac
 
 command -v jq >/dev/null 2>&1 || fail "jq is not installed or not on PATH."
 
@@ -35,17 +28,11 @@ if [ -z "$(printf '%s' "$pane_json" | jq -r '.result.pane.pane_id // empty' 2>/d
 fi
 
 pane_id="$(printf '%s' "$pane_json" | jq -r '.result.pane.pane_id // empty' 2>/dev/null)"
-workspace_id="$(printf '%s' "$pane_json" | jq -r '.result.pane.workspace_id // empty' 2>/dev/null)"
-tab_id="$(printf '%s' "$pane_json" | jq -r '.result.pane.tab_id // empty' 2>/dev/null)"
-
 [ -n "$pane_id" ] || fail "could not resolve the triggering pane."
-[ -n "$workspace_id" ] || fail "could not resolve the triggering workspace."
-[ -n "$tab_id" ] || fail "could not resolve the triggering tab."
 
 exec "$herdr_bin" plugin pane open \
   --plugin "$plugin_id" \
-  --entrypoint "$entrypoint" \
+  --entrypoint picker \
+  --placement popup \
   --focus \
-  --env "HERDR_MOVE_PANE_ID=$pane_id" \
-  --env "HERDR_MOVE_WORKSPACE_ID=$workspace_id" \
-  --env "HERDR_MOVE_TAB_ID=$tab_id"
+  --env "HERDR_RENAME_PANE_ID=$pane_id"

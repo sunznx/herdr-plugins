@@ -192,7 +192,7 @@ STATIC_ACTIONS=(
   "swap_right|Swap pane with the one right|:|exchange switch rotate reorder|herdr pane swap --direction right --pane <pane>"
   "swap_up|Swap pane with the one above|:|exchange switch rotate reorder|herdr pane swap --direction up --pane <pane>"
   "swap_down|Swap pane with the one below|:|exchange switch rotate reorder|herdr pane swap --direction down --pane <pane>"
-  "move_pane_tab|Move pane to another tab…|:|send relocate join merge|herdr pane move <pane> --tab <tab> --focus"
+  "move_pane_tab|Move pane to tab…|:|send relocate join merge existing|herdr pane move <pane> --tab <tab> --split right --focus"
   "move_pane_workspace|Move pane to workspace…|:|send relocate project existing|herdr pane move <pane> --new-tab --workspace <workspace> --focus"
   "move_pane_new_tab|Move pane out to a new tab|:|send relocate extract break out|herdr pane move <pane> --new-tab --focus"
   "move_pane_new_workspace|Move pane out to a new workspace|:|send relocate extract break out|herdr pane move <pane> --new-workspace --focus"
@@ -200,6 +200,7 @@ STATIC_ACTIONS=(
   "prompt_agent|Send a prompt to an agent…|:|ask message text tell claude ai|herdr agent prompt <agent> <text>"
   "interrupt_agent|Interrupt an agent (esc)…|:|stop cancel escape abort key|herdr agent send-keys <agent> esc"
   "rename_agent|Rename an agent…|:|label name target|herdr agent rename <agent> <name>"
+  "rename_pane_agent|Rename pane and agent…|:|label name title current together|herdr pane rename <pane> <name> + herdr agent rename <pane> <name>"
   "new_workspace|New workspace|new_workspace|create project|herdr workspace create --focus"
   "new_workspace_here|New workspace here (named)…|:|create project cwd label prompt directory|herdr workspace create --cwd <cwd> --label <name> --focus"
   "rename_workspace|Rename workspace|rename_workspace|label title project|herdr workspace rename <workspace> <name>"
@@ -230,6 +231,8 @@ plugin_actions_json="$(
           | select(.plugin_id != $self)
           | (.plugin_id + "." + .action_id) as $qid
           | select($qid != "sunznx.herdr-move.open")
+          | select($qid != "sunznx.herdr-move.tab")
+          | select($qid != "sunznx.herdr-rename.open")
           | {
               usage: ("plugin:" + $qid),
               kind: "plugin",
@@ -255,6 +258,7 @@ list_json() { # $1 = jq path into .result, rest = herdr args
 }
 
 tabs_json="$(list_json '.result.tabs // []' tab list --workspace "$workspace")"
+all_tabs_json="$(list_json '.result.tabs // []' tab list)"
 workspaces_json="$(list_json '.result.workspaces // []' workspace list)"
 agents_json="$(list_json '.result.agents // []' agent list)"
 if [ -n "$cwd" ]; then
@@ -569,15 +573,31 @@ case "$kind" in
         args=(pane swap --direction "${payload#swap_}" --pane "$pane")
         ;;
       move_pane_tab)
-        [ -n "$pane" ] || die "command-palette-popup: no origin pane to move."
+        [ -n "$popup_pane" ] || die "command-palette-popup: popup origin pane is unavailable; refusing to move the forwarded pane."
+        source_response="$("$herdr_bin" pane get "$popup_pane" 2>&1)"; source_rc=$?
+        [ $source_rc -eq 0 ] || die "command-palette-popup: origin pane '${popup_pane}' is no longer available.
+${source_response}"
+        source_pane="$(printf '%s' "$source_response" | jq -r '.result.pane.pane_id // empty' 2>/dev/null)"
+        source_tab="$(printf '%s' "$source_response" | jq -r '.result.pane.tab_id // empty' 2>/dev/null)"
+        [ -n "$source_pane" ] || die "command-palette-popup: could not read the live origin pane id."
+        [ -n "$source_tab" ] || die "command-palette-popup: no origin tab to move from."
+        if [ -n "${HERDR_PANE_ID:-}" ] && [ "$source_pane" = "$HERDR_PANE_ID" ]; then
+          die "command-palette-popup: refused to move the palette pane."
+        fi
         target="$(
-          printf '%s' "$tabs_json" | jq -r --arg cur "$tab" '
-            .[] | select(.tab_id != $cur)
-            | [.tab_id, ((.label // .tab_id) + "  (" + ((.pane_count // 0) | tostring) + " panes)")] | @tsv
+          jq -nr --argjson tabs "$all_tabs_json" --argjson workspaces "$workspaces_json" --arg cur "$source_tab" '
+            ($workspaces | map({key: .workspace_id, value: (.label // .workspace_id)}) | from_entries) as $labels
+            | $tabs[] | select(.tab_id != $cur)
+            | [.tab_id, (($labels[.workspace_id] // .workspace_id) + " / #" + (.number | tostring) + " " + (.label // .tab_id))] | @tsv
           ' | pick 'move to tab ▸ '
         )" || exit 0
         [ -n "$target" ] || exit 0
-        args=(pane move "$pane" --tab "$target" --focus)
+        target_response="$("$herdr_bin" tab get "$target" 2>&1)"; target_rc=$?
+        [ $target_rc -eq 0 ] || die "command-palette-popup: destination tab '${target}' is no longer available.
+${target_response}"
+        target_tab="$(printf '%s' "$target_response" | jq -r '.result.tab.tab_id // empty' 2>/dev/null)"
+        [ "$target_tab" = "$target" ] || die "command-palette-popup: destination tab '${target}' is no longer available."
+        args=(pane move "$source_pane" --tab "$target" --split right --focus)
         ;;
       move_pane_workspace)
         [ -n "$popup_pane" ] || die "command-palette-popup: popup origin pane is unavailable; refusing to move the forwarded pane."
@@ -654,6 +674,22 @@ ${split_resp}"
         [ -n "$target" ] || exit 0
         name="$(ask 'New agent name (a-z0-9_-): ')" || exit 0
         args=(agent rename "$target" "$name")
+        ;;
+      rename_pane_agent)
+        [ -n "$popup_pane" ] || die "command-palette-popup: popup origin pane is unavailable; refusing to rename the forwarded pane."
+        source_response="$("$herdr_bin" pane get "$popup_pane" 2>&1)"; source_rc=$?
+        [ $source_rc -eq 0 ] || die "command-palette-popup: origin pane '${popup_pane}' is no longer available.
+${source_response}"
+        source_pane="$(printf '%s' "$source_response" | jq -r '.result.pane.pane_id // empty' 2>/dev/null)"
+        [ -n "$source_pane" ] || die "command-palette-popup: could not read the live origin pane id."
+        name="$(ask 'New pane and agent name: ')" || exit 0
+        has_agent="$(printf '%s' "$agents_json" | jq -r --arg pane "$source_pane" 'any(.[]?; .pane_id == $pane)')"
+        if [ "$has_agent" = "true" ]; then
+          [[ "$name" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] \
+            || die "command-palette-popup: agent names must match [a-z][a-z0-9_-]{0,31}."
+          run agent rename "$source_pane" "$name" >/dev/null
+        fi
+        args=(pane rename "$source_pane" "$name")
         ;;
       new_workspace|new_workspace_here)
         args=(workspace create --focus)
