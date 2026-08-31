@@ -42,7 +42,7 @@ case "$1 $2" in
     printf '%s\n' "$CPP_TEST_TMP/config"
     ;;
   "plugin action")
-    printf '%s\n' '{"result":{"actions":[{"plugin_id":"sunznx.herdr-move","action_id":"open","title":"Move pane to workspace…"},{"plugin_id":"sunznx.herdr-move","action_id":"tab","title":"Move pane to tab…"},{"plugin_id":"sunznx.herdr-rename","action_id":"open","title":"Rename pane and agent…"},{"plugin_id":"sunznx.herdr-rename","action_id":"tab","title":"Rename tab…"},{"plugin_id":"sunznx.herdr-rename","action_id":"agent","title":"Rename agent…"}]}}'
+    printf '%s\n' '{"result":{"actions":[{"plugin_id":"sunznx.herdr-move","action_id":"open","title":"Move pane to workspace"},{"plugin_id":"sunznx.herdr-move","action_id":"tab","title":"Move pane to tab"},{"plugin_id":"sunznx.herdr-rename","action_id":"open","title":"Rename pane and agent"},{"plugin_id":"sunznx.herdr-rename","action_id":"tab","title":"Rename tab"},{"plugin_id":"sunznx.herdr-rename","action_id":"agent","title":"Rename agent"}]}}'
     ;;
   "tab list")
     printf '%s\n' '{"result":{"tabs":[{"tab_id":"w5:t1","workspace_id":"w5","number":1,"label":"source","pane_count":1},{"tab_id":"w3:t2","workspace_id":"w3","number":2,"label":"agents","pane_count":2}]}}'
@@ -122,16 +122,16 @@ test_palette() {
   HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \
     CPP_LIST_ONLY=1 \
     "$script_dir/palette.sh" >"$tmp/list.out"
-  [ "$(grep -Fc 'Move pane to tab…' "$tmp/list.out")" -eq 1 ]
-  [ "$(grep -Fc 'Rename pane and agent…' "$tmp/list.out")" -eq 1 ]
-  [ "$(grep -Fc 'Rename tab…' "$tmp/list.out")" -eq 1 ]
-  [ "$(grep -Fc 'Rename agent…' "$tmp/list.out")" -eq 1 ]
+  [ "$(grep -Fc 'Move pane to tab' "$tmp/list.out")" -eq 1 ]
+  [ "$(grep -Fc 'Rename pane and agent' "$tmp/list.out")" -eq 1 ]
+  [ "$(grep -Fc 'Rename tab' "$tmp/list.out")" -eq 1 ]
+  [ "$(grep -Fc 'Rename agent' "$tmp/list.out")" -eq 1 ]
   grep -Fq $'static\tsunznx.herdr-rename.tab\t' "$tmp/list.out"
   grep -Fq $'static\tsunznx.herdr-rename.agent\t' "$tmp/list.out"
-  ! grep -Fq 'Plugin: Move pane to tab…' "$tmp/list.out"
-  ! grep -Fq 'Plugin: Rename pane and agent…' "$tmp/list.out"
-  ! grep -Fq 'Plugin: Rename tab…' "$tmp/list.out"
-  ! grep -Fq 'Plugin: Rename agent…' "$tmp/list.out"
+  ! grep -Fq 'Plugin: Move pane to tab' "$tmp/list.out"
+  ! grep -Fq 'Plugin: Rename pane and agent' "$tmp/list.out"
+  ! grep -Fq 'Plugin: Rename tab' "$tmp/list.out"
+  ! grep -Fq 'Plugin: Rename agent' "$tmp/list.out"
 
   printf '%s\n' '{"plugin:sunznx.herdr-rename.agent":{"count":99,"last":1}}' > "$tmp/config/usage.json"
   HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \

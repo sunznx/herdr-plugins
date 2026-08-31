@@ -13,15 +13,15 @@ herdr plugin install sunznx/herdr-plugins/herdr-rename
 
 | Action ID | Title |
 | --- | --- |
-| `sunznx.herdr-rename.open` | `Rename pane and agent…` |
-| `sunznx.herdr-rename.tab` | `Rename tab…` |
-| `sunznx.herdr-rename.agent` | `Rename agent…` |
+| `sunznx.herdr-rename.open` | `Rename pane and agent` |
+| `sunznx.herdr-rename.tab` | `Rename tab` |
+| `sunznx.herdr-rename.agent` | `Rename agent` |
 
 Each action opens a focused Herdr popup and accepts the new name through fzf.
 Press `Esc` to cancel without changing a name. Tab and pane labels may contain
 spaces. Agent names must match `[a-z][a-z0-9_-]{0,31}`.
 
-`Rename agent…` targets the agent in the triggering pane and fails without
+`Rename agent` targets the agent in the triggering pane and fails without
 changing anything when that pane has no detected agent.
 
 The plugin renames the agent first because that operation has the stricter

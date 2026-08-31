@@ -1,27 +1,27 @@
 id = "sunznx.herdr-rename"
 name = "Herdr Rename"
-version = "0.2.0"
+version = "0.2.1"
 min_herdr_version = "0.8.0"
 description = "Rename the tab, pane, or agent associated with the triggering pane."
 platforms = ["macos"]
 
 [[actions]]
 id = "open"
-title = "Rename pane and agent…"
+title = "Rename pane and agent"
 description = "Rename the current pane and its detected agent"
 contexts = ["pane"]
 command = ["bash", "open.sh"]
 
 [[actions]]
 id = "tab"
-title = "Rename tab…"
+title = "Rename tab"
 description = "Rename the tab containing the current pane"
 contexts = ["pane"]
 command = ["bash", "open.sh", "tab"]
 
 [[actions]]
 id = "agent"
-title = "Rename agent…"
+title = "Rename agent"
 description = "Rename the agent running in the current pane"
 contexts = ["pane"]
 command = ["bash", "open.sh", "agent"]

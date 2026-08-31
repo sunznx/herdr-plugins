@@ -8,8 +8,8 @@ The list combines:
 - live targets for open tabs, workspaces, agents, and unopened worktrees
 - actions exposed by every installed Herdr plugin
 - effective Herdr keybindings for native commands
-- `Move pane to workspace…`, `Move pane to tab…`, `Rename pane and agent…`,
-  `Rename tab…`, and `Rename agent…` flows that keep the source pane's live ID
+- `Move pane to workspace`, `Move pane to tab`, `Rename pane and agent`,
+  `Rename tab`, and `Rename agent` flows that keep the source pane's live ID
 
 Native commands and plugin actions are ranked by usage frequency and recency. Plugin action failures are read from the Herdr action log and shown before the popup closes.
 
