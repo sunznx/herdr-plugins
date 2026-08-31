@@ -7,7 +7,7 @@ Copies the most recent completed command block from the triggering Herdr pane to
 - `sunznx.herdr-copy-last-command-output.copy-last-command-output` copies only the command output.
 - `sunznx.herdr-copy-last-command-output.copy-last-command-and-output` copies the command text without its prompt, followed by its output.
 
-After a successful clipboard write, the plugin asks Herdr to show a centered `Copied` HUD inside the TUI. Feedback errors are ignored, so an unavailable HUD does not turn a successful copy into a failed action.
+After a successful clipboard write, the plugin asks Herdr to show its standard `[ui.toast.clipboard]` feedback. Its enabled state and position therefore use the normal Herdr configuration. Feedback errors are ignored, so an unavailable toast does not turn a successful copy into a failed action.
 
 ## Installation
 

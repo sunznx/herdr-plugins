@@ -174,4 +174,4 @@ fi
 
 [ -n "$content" ] || fail "could not identify a completed command with non-empty output."
 printf '%s' "$content" | "$clipboard_bin" || fail "could not write to the clipboard."
-"$herdr_bin" feedback show "Copied" --position center >/dev/null 2>&1 || true
+"$herdr_bin" feedback clipboard >/dev/null 2>&1 || true
