@@ -60,6 +60,34 @@ if ! content="$(
         return rest
       }
 
+      function is_robbyrussell_empty_prompt(line, rest) {
+        rest = trim_right(line)
+        if (rest !~ /^➜[[:space:]]+/) return 0
+
+        sub(/^➜[[:space:]]+/, "", rest)
+        if (rest == "") return 0
+        if (rest !~ /[[:space:]]/) return 1
+
+        sub(/^[^[:space:]]+[[:space:]]+/, "", rest)
+        if (rest == "") return 1
+        return rest ~ /^git:\([^)]*\)([[:space:]]+✗)?$/
+      }
+
+      function command_after_robbyrussell_prompt(line, rest) {
+        if (line !~ /^➜[[:space:]]+/) return ""
+
+        rest = line
+        sub(/^➜[[:space:]]+/, "", rest)
+        if (rest !~ /^[^[:space:]]+[[:space:]]+/) return ""
+        sub(/^[^[:space:]]+[[:space:]]+/, "", rest)
+
+        if (rest ~ /^git:\([^)]*\)([[:space:]]+|$)/) {
+          sub(/^git:\([^)]*\)[[:space:]]*/, "", rest)
+          if (rest ~ /^✗([[:space:]]+|$)/) sub(/^✗[[:space:]]*/, "", rest)
+        }
+        return trim_left(rest)
+      }
+
       function command_after_prompt(line, marker, remaining, offset, relative, rest) {
         remaining = line
         offset = 0
@@ -88,13 +116,29 @@ if ! content="$(
         while (prompt_line > 0 && lines[prompt_line] ~ /^[[:space:]]*$/) prompt_line--
 
         prompt_prefix = trim_right(lines[prompt_line])
+        robbyrussell_prompt = prompt_prefix ~ /^➜[[:space:]]+/
+        robbyrussell_empty_prompt = is_robbyrussell_empty_prompt(lines[prompt_line])
+        if (robbyrussell_prompt && !robbyrussell_empty_prompt) exit 2
+
         command_line = 0
         command = ""
-        for (line_number = prompt_line - 1; line_number > 0; line_number--) {
-          command = command_after_prefix(lines[line_number], prompt_prefix)
-          if (command != "") {
-            command_line = line_number
-            break
+        if (!robbyrussell_empty_prompt) {
+          for (line_number = prompt_line - 1; line_number > 0; line_number--) {
+            command = command_after_prefix(lines[line_number], prompt_prefix)
+            if (command != "") {
+              command_line = line_number
+              break
+            }
+          }
+        }
+
+        if (command_line == 0 && robbyrussell_empty_prompt) {
+          for (line_number = prompt_line - 1; line_number > 0; line_number--) {
+            command = command_after_robbyrussell_prompt(lines[line_number])
+            if (command != "") {
+              command_line = line_number
+              break
+            }
           }
         }
 

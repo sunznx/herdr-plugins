@@ -81,6 +81,46 @@ run_action command-and-output
 assert_clipboard $'printf hello\nhello'
 
 cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
+➜ repo git:(main) touch dirty-file && printf dirty
+dirty
+➜ repo git:(main) ✗
+FIXTURE
+run_action output
+assert_clipboard 'dirty'
+run_action command-and-output
+assert_clipboard $'touch dirty-file && printf dirty\ndirty'
+
+cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
+➜ repo git:(main) ✗ git restore . && printf clean
+clean
+➜ repo git:(main)
+FIXTURE
+run_action output
+assert_clipboard 'clean'
+run_action command-and-output
+assert_clipboard $'git restore . && printf clean\nclean'
+
+cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
+➜ old-dir git:(main) cd ../new-dir && printf moved
+moved
+➜ new-dir git:(main)
+FIXTURE
+run_action output
+assert_clipboard 'moved'
+run_action command-and-output
+assert_clipboard $'cd ../new-dir && printf moved\nmoved'
+
+cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
+➜ repo git:(main) git switch feature && printf switched
+switched
+➜ repo git:(feature)
+FIXTURE
+run_action output
+assert_clipboard 'switched'
+run_action command-and-output
+assert_clipboard $'git switch feature && printf switched\nswitched'
+
+cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
 > printf hello > /tmp/result
 wrote result
 > 
@@ -107,6 +147,20 @@ no recognizable prompt here
 FIXTURE
 if "$script_dir/copy.sh" output >/dev/null 2>&1; then
   printf 'expected an unrecognized prompt to fail\n' >&2
+  exit 1
+fi
+assert_clipboard 'unchanged'
+[ ! -s "$HERDR_COPY_TEST_CLIPBOARD_LOG" ]
+
+printf 'unchanged' > "$HERDR_COPY_TEST_CLIPBOARD"
+: > "$HERDR_COPY_TEST_CLIPBOARD_LOG"
+cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
+➜ repo git:(main) printf old
+old
+➜ repo git:(main) echo pending ➜
+FIXTURE
+if "$script_dir/copy.sh" output >/dev/null 2>&1; then
+  printf 'expected a non-empty robbyrussell prompt to fail\n' >&2
   exit 1
 fi
 assert_clipboard 'unchanged'
