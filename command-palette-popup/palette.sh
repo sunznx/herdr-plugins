@@ -14,31 +14,57 @@
 # their identities change across sessions.
 #
 # Debug env vars: CPP_LIST_ONLY=1 prints the generated rows (TSV) and exits
-# without fzf; CPP_CHOICE="<kind><TAB><payload>" preselects a row; CPP_DRY_RUN=1
-# prints the `herdr` command a selection would run instead of running it.
+# without fzf; CPP_CHOICE="<kind><TAB><payload>" preselects a row;
+# CPP_PICK_VALUE supplies a nested picker result; CPP_DRY_RUN=1 prints the
+# `herdr` command a selection would run instead of running it.
 set -uo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 herdr_bin="${HERDR_BIN_PATH:-herdr}"
 self_plugin="${HERDR_PLUGIN_ID:-sunznx.command-palette-popup}"
 
+if [ "${1:-}" = "--self-test" ]; then
+  exec "$script_dir/test.sh" palette
+fi
+
 die() {
   printf '%s\n' "$*" >&2
-  printf 'Press any key to close…' >&2
-  read -r -n1 _ 2>/dev/null || sleep 2
+  if [ -t 0 ]; then
+    printf 'Press any key to close…' >&2
+    read -r -n1 _ 2>/dev/null || sleep 2
+  fi
   exit 1
 }
 
 command -v fzf >/dev/null 2>&1 || die "command-palette-popup: fzf is not installed or not on PATH."
 command -v jq  >/dev/null 2>&1 || die "command-palette-popup: jq is not installed or not on PATH."
 
-# --- Origin context, forwarded by open.sh as a single JSON blob (see its header
-# comment for why: the popup is a new pane, so acting on ITS OWN ids would be
-# wrong for every pane/tab/workspace-scoped action below). ---
-ctx="${CPP_CONTEXT_JSON:-{}}"
+# --- Origin context, forwarded by open.sh as a single JSON blob. It is a
+# fallback for general commands; pane-to-workspace moves require the popup's
+# authoritative invocation context below. ---
+ctx="${CPP_CONTEXT_JSON:-}"
+[ -n "$ctx" ] || ctx='{}'
 pane="$(printf '%s' "$ctx" | jq -r '.pane // empty' 2>/dev/null)"
 tab="$(printf '%s' "$ctx" | jq -r '.tab // empty' 2>/dev/null)"
 workspace="$(printf '%s' "$ctx" | jq -r '.workspace // empty' 2>/dev/null)"
 cwd="$(printf '%s' "$ctx" | jq -r '.cwd // empty' 2>/dev/null)"
+# A real popup is not a Herdr pane, so Herdr keeps the tiled pane underneath it
+# in the popup's own invocation context. Prefer that authoritative snapshot to
+# the forwarded fallback prepared by open.sh.
+popup_ctx="${HERDR_PLUGIN_CONTEXT_JSON:-}"
+popup_pane=""
+if [ -n "$popup_ctx" ]; then
+  popup_pane="$(printf '%s' "$popup_ctx" | jq -r '.focused_pane_id // empty' 2>/dev/null)"
+  if [ -n "$popup_pane" ]; then
+    pane="$popup_pane"
+    popup_tab="$(printf '%s' "$popup_ctx" | jq -r '.tab_id // empty' 2>/dev/null)"
+    popup_workspace="$(printf '%s' "$popup_ctx" | jq -r '.workspace_id // empty' 2>/dev/null)"
+    popup_cwd="$(printf '%s' "$popup_ctx" | jq -r '.focused_pane_cwd // .workspace_cwd // empty' 2>/dev/null)"
+    [ -n "$popup_tab" ] && tab="$popup_tab"
+    [ -n "$popup_workspace" ] && workspace="$popup_workspace"
+    [ -n "$popup_cwd" ] && cwd="$popup_cwd"
+  fi
+fi
 
 # --- Usage tracking (drives the ranking) ---
 # Stored as {"<action-id>": {"count": N, "last": <epoch>}}. Plain integers
@@ -167,6 +193,7 @@ STATIC_ACTIONS=(
   "swap_up|Swap pane with the one above|:|exchange switch rotate reorder|herdr pane swap --direction up --pane <pane>"
   "swap_down|Swap pane with the one below|:|exchange switch rotate reorder|herdr pane swap --direction down --pane <pane>"
   "move_pane_tab|Move pane to another tab…|:|send relocate join merge|herdr pane move <pane> --tab <tab> --focus"
+  "move_pane_workspace|Move pane to workspace…|:|send relocate project existing|herdr pane move <pane> --new-tab --workspace <workspace> --focus"
   "move_pane_new_tab|Move pane out to a new tab|:|send relocate extract break out|herdr pane move <pane> --new-tab --focus"
   "move_pane_new_workspace|Move pane out to a new workspace|:|send relocate extract break out|herdr pane move <pane> --new-workspace --focus"
   "start_agent|Start an agent in a new split…|:|claude codex gemini ai launch spawn run new|herdr pane split + herdr agent start <name> --kind <kind>"
@@ -202,6 +229,7 @@ plugin_actions_json="$(
         [ .result.actions[]?
           | select(.plugin_id != $self)
           | (.plugin_id + "." + .action_id) as $qid
+          | select($qid != "sunznx.herdr-move.open")
           | {
               usage: ("plugin:" + $qid),
               kind: "plugin",
@@ -405,6 +433,11 @@ ask() { # $1 = prompt label; prints the answer, non-zero if empty/aborted
 
 pick() { # stdin: "value<TAB>label" lines; $1 = prompt; prints the value
   local sel
+  if [ -n "${CPP_PICK_VALUE:-}" ]; then
+    cat >/dev/null
+    printf '%s' "$CPP_PICK_VALUE"
+    return 0
+  fi
   sel="$(fzf --delimiter=$'\t' --with-nth=2 --prompt="$1" --reverse --cycle --no-multi --tiebreak=begin,index)" || return 1
   [ -n "$sel" ] || return 1
   printf '%s' "${sel%%$'\t'*}"
@@ -545,6 +578,27 @@ case "$kind" in
         )" || exit 0
         [ -n "$target" ] || exit 0
         args=(pane move "$pane" --tab "$target" --focus)
+        ;;
+      move_pane_workspace)
+        [ -n "$popup_pane" ] || die "command-palette-popup: popup origin pane is unavailable; refusing to move the forwarded pane."
+        source_response="$("$herdr_bin" pane get "$popup_pane" 2>&1)"; source_rc=$?
+        [ $source_rc -eq 0 ] || die "command-palette-popup: origin pane '${popup_pane}' is no longer available.
+${source_response}"
+        source_pane="$(printf '%s' "$source_response" | jq -r '.result.pane.pane_id // empty' 2>/dev/null)"
+        source_workspace="$(printf '%s' "$source_response" | jq -r '.result.pane.workspace_id // empty' 2>/dev/null)"
+        [ -n "$source_pane" ] || die "command-palette-popup: could not read the live origin pane id."
+        [ -n "$source_workspace" ] || die "command-palette-popup: no origin workspace to move from."
+        if [ -n "${HERDR_PANE_ID:-}" ] && [ "$source_pane" = "$HERDR_PANE_ID" ]; then
+          die "command-palette-popup: refused to move the palette pane; reopen it after the popup placement update."
+        fi
+        target="$(
+          printf '%s' "$workspaces_json" | jq -r --arg cur "$source_workspace" '
+            .[] | select(.workspace_id != $cur)
+            | [.workspace_id, (.label // .workspace_id)] | @tsv
+          ' | pick 'move to workspace ▸ '
+        )" || exit 0
+        [ -n "$target" ] || exit 0
+        args=(pane move "$source_pane" --new-tab --workspace "$target" --focus)
         ;;
       move_pane_new_tab)
         [ -n "$pane" ] || die "command-palette-popup: no origin pane to move."

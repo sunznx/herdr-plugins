@@ -1,0 +1,21 @@
+id = "sunznx.herdr-move"
+name = "Herdr Move"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Move the triggering pane and its running agent into an existing workspace."
+platforms = ["macos"]
+
+[[actions]]
+id = "open"
+title = "Move pane to workspace…"
+description = "Move the current pane into a new tab in an existing workspace"
+contexts = ["pane"]
+command = ["bash", "open.sh"]
+
+[[panes]]
+id = "picker"
+title = "Move pane"
+placement = "popup"
+width = 64
+height = 20
+command = ["bash", "move.sh"]
