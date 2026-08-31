@@ -13,13 +13,26 @@ cat > "$tmp/herdr" <<'FAKE'
 #!/usr/bin/env bash
 set -u
 printf '%s\n' "$*" >> "$HERDR_COPY_TEST_HERDR_LOG"
-cat "$HERDR_COPY_TEST_FIXTURE"
+case "$1 $2" in
+  "pane read")
+    cat "$HERDR_COPY_TEST_FIXTURE"
+    ;;
+  "feedback show")
+    printf 'feedback\n' >> "$HERDR_COPY_TEST_EVENT_LOG"
+    [ "${HERDR_COPY_TEST_FEEDBACK_FAIL:-0}" != 1 ]
+    ;;
+  *)
+    exit 1
+    ;;
+esac
 FAKE
 
 cat > "$tmp/clipboard" <<'FAKE'
 #!/usr/bin/env bash
 set -u
+printf 'clipboard\n' >> "$HERDR_COPY_TEST_EVENT_LOG"
 printf 'called\n' >> "$HERDR_COPY_TEST_CLIPBOARD_LOG"
+[ "${HERDR_COPY_TEST_CLIPBOARD_FAIL:-0}" != 1 ] || exit 1
 cat > "$HERDR_COPY_TEST_CLIPBOARD"
 FAKE
 
@@ -31,6 +44,7 @@ export HERDR_COPY_TEST_FIXTURE="$tmp/fixture"
 export HERDR_COPY_TEST_HERDR_LOG="$tmp/herdr.log"
 export HERDR_COPY_TEST_CLIPBOARD_LOG="$tmp/clipboard.log"
 export HERDR_COPY_TEST_CLIPBOARD="$tmp/clipboard.txt"
+export HERDR_COPY_TEST_EVENT_LOG="$tmp/events.log"
 
 assert_clipboard() {
   expected="$1"
@@ -45,8 +59,11 @@ run_action() {
   expected_pane_id="${2:-w1:p2}"
   : > "$HERDR_COPY_TEST_HERDR_LOG"
   : > "$HERDR_COPY_TEST_CLIPBOARD_LOG"
+  : > "$HERDR_COPY_TEST_EVENT_LOG"
   PATH="$runtime_bin" "$script_dir/copy.sh" "$1"
   grep -Fq "pane read $expected_pane_id --source recent-unwrapped --lines 10000 --format text" "$HERDR_COPY_TEST_HERDR_LOG"
+  grep -Fxq "feedback show Copied --position center" "$HERDR_COPY_TEST_HERDR_LOG"
+  [ "$(cat "$HERDR_COPY_TEST_EVENT_LOG")" = $'clipboard\nfeedback' ]
 }
 
 cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
@@ -58,6 +75,29 @@ run_action output
 assert_clipboard 'hello'
 run_action command-and-output
 assert_clipboard $'printf hello\nhello'
+
+export HERDR_COPY_TEST_FEEDBACK_FAIL=1
+run_action output
+assert_clipboard 'hello'
+unset HERDR_COPY_TEST_FEEDBACK_FAIL
+
+printf 'unchanged' > "$HERDR_COPY_TEST_CLIPBOARD"
+: > "$HERDR_COPY_TEST_HERDR_LOG"
+: > "$HERDR_COPY_TEST_CLIPBOARD_LOG"
+: > "$HERDR_COPY_TEST_EVENT_LOG"
+export HERDR_COPY_TEST_CLIPBOARD_FAIL=1
+if "$script_dir/copy.sh" output >/dev/null 2>&1; then
+  printf 'expected clipboard failure to fail the action\n' >&2
+  exit 1
+fi
+unset HERDR_COPY_TEST_CLIPBOARD_FAIL
+assert_clipboard 'unchanged'
+grep -Fxq "pane read w1:p2 --source recent-unwrapped --lines 10000 --format text" "$HERDR_COPY_TEST_HERDR_LOG"
+if grep -Fq "feedback show" "$HERDR_COPY_TEST_HERDR_LOG"; then
+  printf 'expected clipboard failure not to show feedback\n' >&2
+  exit 1
+fi
+[ "$(cat "$HERDR_COPY_TEST_EVENT_LOG")" = 'clipboard' ]
 
 export HERDR_PLUGIN_CONTEXT_JSON='{}'
 export HERDR_PANE_ID='w2:p3'
@@ -141,7 +181,9 @@ run_action command-and-output
 assert_clipboard $'printf hello\nhello'
 
 printf 'unchanged' > "$HERDR_COPY_TEST_CLIPBOARD"
+: > "$HERDR_COPY_TEST_HERDR_LOG"
 : > "$HERDR_COPY_TEST_CLIPBOARD_LOG"
+: > "$HERDR_COPY_TEST_EVENT_LOG"
 cat > "$HERDR_COPY_TEST_FIXTURE" <<'FIXTURE'
 no recognizable prompt here
 FIXTURE
@@ -151,6 +193,11 @@ if "$script_dir/copy.sh" output >/dev/null 2>&1; then
 fi
 assert_clipboard 'unchanged'
 [ ! -s "$HERDR_COPY_TEST_CLIPBOARD_LOG" ]
+if grep -Fq "feedback show" "$HERDR_COPY_TEST_HERDR_LOG"; then
+  printf 'expected parse failure not to show feedback\n' >&2
+  exit 1
+fi
+[ ! -s "$HERDR_COPY_TEST_EVENT_LOG" ]
 
 printf 'unchanged' > "$HERDR_COPY_TEST_CLIPBOARD"
 : > "$HERDR_COPY_TEST_CLIPBOARD_LOG"
