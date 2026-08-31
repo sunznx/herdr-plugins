@@ -7,6 +7,9 @@ if [ -z "${FZF_DEFAULT_OPTS_FILE:-}" ]; then
 fi
 
 case "${1:-}" in
+  fzf)
+    action=(plugin fzf)
+    ;;
   rg)
     action=(plugin fr rg)
     ;;
