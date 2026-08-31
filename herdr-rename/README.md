@@ -1,7 +1,7 @@
 # herdr-rename
 
-Renames the pane that triggered the action. If Herdr has detected an agent in
-that pane, the same name is applied to the agent.
+Renames the tab, pane, or agent associated with the pane that triggered an
+action.
 
 ## Install
 
@@ -14,13 +14,15 @@ herdr plugin install sunznx/herdr-plugins/herdr-rename
 | Action ID | Title |
 | --- | --- |
 | `sunznx.herdr-rename.open` | `Rename pane and agent…` |
+| `sunznx.herdr-rename.tab` | `Rename tab…` |
+| `sunznx.herdr-rename.agent` | `Rename agent…` |
 
-The action opens a focused Herdr popup and accepts the new name through fzf.
-Press `Esc` to cancel without changing either name.
+Each action opens a focused Herdr popup and accepts the new name through fzf.
+Press `Esc` to cancel without changing a name. Tab and pane labels may contain
+spaces. Agent names must match `[a-z][a-z0-9_-]{0,31}`.
 
-When an agent is present, the name must match
-`[a-z][a-z0-9_-]{0,31}`. A pane without an agent can use a normal Herdr pane
-label, including spaces.
+`Rename agent…` targets the agent in the triggering pane and fails without
+changing anything when that pane has no detected agent.
 
 The plugin renames the agent first because that operation has the stricter
 validation and uniqueness checks. If it fails, the pane label stays unchanged.
@@ -36,14 +38,31 @@ command = "sunznx.herdr-rename.open"
 description = "rename pane and agent"
 ```
 
+Use either standalone action the same way:
+
+```toml
+[[keys.command]]
+key = "prefix+r"
+type = "plugin_action"
+command = "sunznx.herdr-rename.tab"
+description = "rename tab"
+
+[[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "sunznx.herdr-rename.agent"
+description = "rename agent"
+```
+
 ## Pane context
 
 The action validates `LIVE_PANE_ID` when it is supplied by another plugin such
 as `command-palette-popup`. A direct key binding normally has no
 `LIVE_PANE_ID`, so the action resolves its caller with
-`herdr pane current --current` before opening the popup. The resolved pane ID
-is passed into the popup through `HERDR_RENAME_PANE_ID`; the popup itself is
-never used as the rename target.
+`herdr pane current --current` before opening the popup. The resolved pane and
+tab IDs are passed into the popup through `HERDR_RENAME_PANE_ID` and
+`HERDR_RENAME_TAB_ID`; the popup itself is never used as the rename target.
+Targets are checked again immediately before renaming.
 
 ## Requirements
 

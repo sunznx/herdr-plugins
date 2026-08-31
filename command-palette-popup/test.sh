@@ -21,6 +21,7 @@ case "$1 $2" in
     printf '%s\n' '{"result":{"pane":{"pane_id":"w9:p9","tab_id":"w9:t1","workspace_id":"w9"}}}'
     ;;
   "pane get")
+    [ "${FAKE_PANE_GET_FAIL:-0}" != "1" ] || exit 1
     if [ "${3:-}" = "w5:p5" ] || [ "${3:-}" = "w7:p7" ]; then
       workspace="${3%%:*}"
       printf '{"result":{"pane":{"pane_id":"%s","tab_id":"%s:t1","workspace_id":"%s"}}}\n' "$3" "$workspace" "$workspace"
@@ -41,14 +42,20 @@ case "$1 $2" in
     printf '%s\n' "$CPP_TEST_TMP/config"
     ;;
   "plugin action")
-    printf '%s\n' '{"result":{"actions":[{"plugin_id":"sunznx.herdr-move","action_id":"open","title":"Move pane to workspace…"},{"plugin_id":"sunznx.herdr-move","action_id":"tab","title":"Move pane to tab…"},{"plugin_id":"sunznx.herdr-rename","action_id":"open","title":"Rename pane and agent…"}]}}'
+    printf '%s\n' '{"result":{"actions":[{"plugin_id":"sunznx.herdr-move","action_id":"open","title":"Move pane to workspace…"},{"plugin_id":"sunznx.herdr-move","action_id":"tab","title":"Move pane to tab…"},{"plugin_id":"sunznx.herdr-rename","action_id":"open","title":"Rename pane and agent…"},{"plugin_id":"sunznx.herdr-rename","action_id":"tab","title":"Rename tab…"},{"plugin_id":"sunznx.herdr-rename","action_id":"agent","title":"Rename agent…"}]}}'
     ;;
   "tab list")
     printf '%s\n' '{"result":{"tabs":[{"tab_id":"w5:t1","workspace_id":"w5","number":1,"label":"source","pane_count":1},{"tab_id":"w3:t2","workspace_id":"w3","number":2,"label":"agents","pane_count":2}]}}'
     ;;
   "tab get")
-    [ "${3:-}" = "w3:t2" ] || exit 1
-    printf '%s\n' '{"result":{"tab":{"tab_id":"w3:t2"}}}'
+    [ "${FAKE_TAB_GET_FAIL:-0}" != "1" ] || exit 1
+    case "${3:-}" in
+      w3:t2|w5:t1) printf '{"result":{"tab":{"tab_id":"%s"}}}\n' "$3" ;;
+      *) exit 1 ;;
+    esac
+    ;;
+  "tab rename")
+    printf '%s\n' '{"result":{"tab":{"tab_id":"w5:t1"}}}'
     ;;
   "workspace list")
     printf '%s\n' '{"result":{"workspaces":[{"workspace_id":"w9","label":"source"},{"workspace_id":"w3","label":"herdr-plugin"}]}}'
@@ -117,8 +124,68 @@ test_palette() {
     "$script_dir/palette.sh" >"$tmp/list.out"
   [ "$(grep -Fc 'Move pane to tab…' "$tmp/list.out")" -eq 1 ]
   [ "$(grep -Fc 'Rename pane and agent…' "$tmp/list.out")" -eq 1 ]
+  [ "$(grep -Fc 'Rename tab…' "$tmp/list.out")" -eq 1 ]
+  [ "$(grep -Fc 'Rename agent…' "$tmp/list.out")" -eq 1 ]
+  grep -Fq $'static\tsunznx.herdr-rename.tab\t' "$tmp/list.out"
+  grep -Fq $'static\tsunznx.herdr-rename.agent\t' "$tmp/list.out"
   ! grep -Fq 'Plugin: Move pane to tab…' "$tmp/list.out"
   ! grep -Fq 'Plugin: Rename pane and agent…' "$tmp/list.out"
+  ! grep -Fq 'Plugin: Rename tab…' "$tmp/list.out"
+  ! grep -Fq 'Plugin: Rename agent…' "$tmp/list.out"
+
+  printf '%s\n' '{"plugin:sunznx.herdr-rename.agent":{"count":99,"last":1}}' > "$tmp/config/usage.json"
+  HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \
+    CPP_LIST_ONLY=1 \
+    "$script_dir/palette.sh" >"$tmp/ranked-list.out"
+  head -1 "$tmp/ranked-list.out" | grep -Fq $'static\tsunznx.herdr-rename.agent\t'
+  printf '%s\n' '{}' > "$tmp/config/usage.json"
+
+  : > "$CPP_TEST_LOG"
+  printf 'Build Logs\n' | \
+    HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \
+    CPP_CHOICE=$'static\tsunznx.herdr-rename.tab' \
+    "$script_dir/palette.sh" >/dev/null
+  grep -Fq 'pane get w5:p5' "$CPP_TEST_LOG"
+  grep -Fq 'tab get w5:t1' "$CPP_TEST_LOG"
+  grep -Fq 'tab rename w5:t1 Build Logs' "$CPP_TEST_LOG"
+  ! grep -Fq 'plugin action invoke sunznx.herdr-rename.tab' "$CPP_TEST_LOG"
+
+  : > "$CPP_TEST_LOG"
+  printf 'reviewer-2\n' | FAKE_HAS_AGENT=1 \
+    HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \
+    CPP_CHOICE=$'static\tsunznx.herdr-rename.agent' \
+    "$script_dir/palette.sh" >/dev/null
+  grep -Fq 'pane get w5:p5' "$CPP_TEST_LOG"
+  grep -Fq 'agent list' "$CPP_TEST_LOG"
+  grep -Fq 'agent rename w5:p5 reviewer-2' "$CPP_TEST_LOG"
+  ! grep -Fq 'plugin action invoke sunznx.herdr-rename.agent' "$CPP_TEST_LOG"
+
+  : > "$CPP_TEST_LOG"
+  if printf 'Invalid Name\n' | FAKE_HAS_AGENT=1 \
+    HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \
+    CPP_CHOICE=$'static\tsunznx.herdr-rename.agent' \
+    "$script_dir/palette.sh" >/dev/null 2>&1; then
+    printf 'expected invalid agent name to fail\n' >&2
+    return 1
+  fi
+  ! grep -Fq 'agent rename ' "$CPP_TEST_LOG"
+
+  : > "$CPP_TEST_LOG"
+  if printf 'Missing Tab\n' | FAKE_TAB_GET_FAIL=1 \
+    HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \
+    CPP_CHOICE=$'static\tsunznx.herdr-rename.tab' \
+    "$script_dir/palette.sh" >/dev/null 2>&1; then
+    printf 'expected disappeared tab to fail\n' >&2
+    return 1
+  fi
+  ! grep -Fq 'tab rename ' "$CPP_TEST_LOG"
+
+  : > "$CPP_TEST_LOG"
+  printf '\n' | \
+    HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5"}' \
+    CPP_CHOICE=$'static\tsunznx.herdr-rename.tab' \
+    "$script_dir/palette.sh" >/dev/null
+  ! grep -Fq 'tab rename ' "$CPP_TEST_LOG"
 
   : > "$CPP_TEST_LOG"
   HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5","focused_pane_cwd":"/tmp"}' \

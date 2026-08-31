@@ -173,7 +173,7 @@ prefix_key="$(printf '%s' "$keys_json" | jq -r '.prefix // "ctrl+b"')"
 STATIC_ACTIONS=(
   "new_tab|New tab|new_tab|create window|herdr tab create --focus"
   "new_tab_named|New tab (named)…|:|create window label prompt|herdr tab create --label <name> --focus"
-  "rename_tab|Rename tab|rename_tab|label title|herdr tab rename <tab> <name>"
+  "sunznx.herdr-rename.tab|Rename tab…|:|label title custom plugin|sunznx.herdr-rename.tab"
   "close_tab|Close tab|close_tab|kill remove quit delete|herdr tab close <tab>"
   "split_vertical|Split pane right (vertical)|split_vertical|vsplit beside column new|herdr pane split <pane> --direction right --focus"
   "split_horizontal|Split pane down (horizontal)|split_horizontal|hsplit below row new|herdr pane split <pane> --direction down --focus"
@@ -199,7 +199,7 @@ STATIC_ACTIONS=(
   "start_agent|Start an agent in a new split…|:|claude codex gemini ai launch spawn run new|herdr pane split + herdr agent start <name> --kind <kind>"
   "prompt_agent|Send a prompt to an agent…|:|ask message text tell claude ai|herdr agent prompt <agent> <text>"
   "interrupt_agent|Interrupt an agent (esc)…|:|stop cancel escape abort key|herdr agent send-keys <agent> esc"
-  "rename_agent|Rename an agent…|:|label name target|herdr agent rename <agent> <name>"
+  "sunznx.herdr-rename.agent|Rename agent…|:|label name current custom plugin|sunznx.herdr-rename.agent"
   "rename_pane_agent|Rename pane and agent…|:|label name title current together|herdr pane rename <pane> <name> + herdr agent rename <pane> <name>"
   "new_workspace|New workspace|new_workspace|create project|herdr workspace create --focus"
   "new_workspace_here|New workspace here (named)…|:|create project cwd label prompt directory|herdr workspace create --cwd <cwd> --label <name> --focus"
@@ -216,6 +216,8 @@ actions_json="$(
     split("\n") | map(select(length > 0))
     | map(split("|") as $f | {
         id: $f[0], title: $f[1],
+        usage: (if ($f[0] | startswith("sunznx.herdr-rename."))
+                then ("plugin:" + $f[0]) else $f[0] end),
         key: (if $f[2] == ":" then "" else $f[2] end),
         keywords: $f[3], hint: $f[4]
       } )
@@ -233,6 +235,8 @@ plugin_actions_json="$(
           | select($qid != "sunznx.herdr-move.open")
           | select($qid != "sunznx.herdr-move.tab")
           | select($qid != "sunznx.herdr-rename.open")
+          | select($qid != "sunznx.herdr-rename.tab")
+          | select($qid != "sunznx.herdr-rename.agent")
           | {
               usage: ("plugin:" + $qid),
               kind: "plugin",
@@ -305,7 +309,7 @@ lines="$(
 
     ( ($actions
         | map(
-            (($counts[.id] // 0) | if type == "object" then . else {count: ., last: 0} end) as $u
+            (($counts[.usage] // 0) | if type == "object" then . else {count: ., last: 0} end) as $u
             | . + {
                 kind: "static", payload: .id,
                 key: shortcut(.key; null),
@@ -521,7 +525,10 @@ case "$kind" in
     [ -n "$cwd" ] && args+=(--cwd "$cwd")
     ;;
   static)
-    record_usage "$payload"
+    case "$payload" in
+      sunznx.herdr-rename.*) record_usage "plugin:$payload" ;;
+      *) record_usage "$payload" ;;
+    esac
     case "$payload" in
       new_tab|new_tab_named)
         args=(tab create --focus)
@@ -536,10 +543,23 @@ case "$kind" in
         [ -n "$tab" ] || die "command-palette-popup: no origin tab to close."
         args=(tab close "$tab")
         ;;
-      rename_tab)
-        [ -n "$tab" ] || die "command-palette-popup: no origin tab to rename."
+      sunznx.herdr-rename.tab)
+        [ -n "$popup_pane" ] || die "command-palette-popup: popup origin pane is unavailable; refusing to rename the forwarded tab."
         name="$(ask 'New tab name: ')" || exit 0
-        args=(tab rename "$tab" "$name")
+        source_response="$("$herdr_bin" pane get "$popup_pane" 2>&1)"; source_rc=$?
+        [ $source_rc -eq 0 ] || die "command-palette-popup: origin pane '${popup_pane}' is no longer available.
+${source_response}"
+        source_pane="$(printf '%s' "$source_response" | jq -r '.result.pane.pane_id // empty' 2>/dev/null)"
+        source_tab="$(printf '%s' "$source_response" | jq -r '.result.pane.tab_id // empty' 2>/dev/null)"
+        [ "$source_pane" = "$popup_pane" ] && [ -n "$source_tab" ] \
+          || die "command-palette-popup: origin tab is no longer available."
+        tab_response="$("$herdr_bin" tab get "$source_tab" 2>&1)"; tab_rc=$?
+        [ $tab_rc -eq 0 ] \
+          || die "command-palette-popup: origin tab '${source_tab}' is no longer available.
+${tab_response}"
+        [ "$(printf '%s' "$tab_response" | jq -r '.result.tab.tab_id // empty' 2>/dev/null)" = "$source_tab" ] \
+          || die "command-palette-popup: origin tab '${source_tab}' is no longer available."
+        args=(tab rename "$source_tab" "$name")
         ;;
       split_vertical|split_horizontal)
         [ -n "$pane" ] || die "command-palette-popup: no origin pane to split."
@@ -669,11 +689,24 @@ ${split_resp}"
         [ -n "$target" ] || exit 0
         args=(agent send-keys "$target" esc)
         ;;
-      rename_agent)
-        target="$(pick_agent)" || exit 0
-        [ -n "$target" ] || exit 0
+      sunznx.herdr-rename.agent)
+        [ -n "$popup_pane" ] || die "command-palette-popup: popup origin pane is unavailable; refusing to rename an agent from the forwarded pane."
         name="$(ask 'New agent name (a-z0-9_-): ')" || exit 0
-        args=(agent rename "$target" "$name")
+        [[ "$name" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] \
+          || die "command-palette-popup: agent names must match [a-z][a-z0-9_-]{0,31}."
+        source_response="$("$herdr_bin" pane get "$popup_pane" 2>&1)"; source_rc=$?
+        [ $source_rc -eq 0 ] || die "command-palette-popup: origin pane '${popup_pane}' is no longer available.
+${source_response}"
+        source_pane="$(printf '%s' "$source_response" | jq -r '.result.pane.pane_id // empty' 2>/dev/null)"
+        [ "$source_pane" = "$popup_pane" ] \
+          || die "command-palette-popup: origin pane '${popup_pane}' is no longer available."
+        agent_response="$("$herdr_bin" agent list 2>&1)"; agent_rc=$?
+        [ $agent_rc -eq 0 ] || die "command-palette-popup: could not list Herdr agents.
+${agent_response}"
+        printf '%s' "$agent_response" | jq -e --arg pane "$source_pane" \
+          'any(.result.agents[]?; .pane_id == $pane)' >/dev/null 2>&1 \
+          || die "command-palette-popup: the origin pane does not have a detected agent."
+        args=(agent rename "$source_pane" "$name")
         ;;
       rename_pane_agent)
         [ -n "$popup_pane" ] || die "command-palette-popup: popup origin pane is unavailable; refusing to rename the forwarded pane."

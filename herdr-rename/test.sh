@@ -13,15 +13,18 @@ printf '%s\n' "$*" >> "$HERDR_RENAME_TEST_LOG"
 
 case "$1 $2" in
   "pane get")
+    if [ "${FAKE_PANE_DISAPPEARS:-0}" = "1" ] && [ "$(grep -c '^pane get ' "$HERDR_RENAME_TEST_LOG")" -gt 1 ]; then
+      exit 1
+    fi
     if [ "${3:-}" = "w7:p7" ] || [ "${3:-}" = "w9:p9" ]; then
-      printf '{"result":{"pane":{"pane_id":"%s","workspace_id":"%s"}}}\n' "$3" "${3%%:*}"
+      printf '{"result":{"pane":{"pane_id":"%s","tab_id":"%s:t1","workspace_id":"%s"}}}\n' "$3" "${3%%:*}" "${3%%:*}"
       exit 0
     fi
     exit 1
     ;;
   "pane current")
     [ "${FAKE_CURRENT_FAIL:-0}" != "1" ] || exit 1
-    printf '%s\n' '{"result":{"pane":{"pane_id":"w9:p9","workspace_id":"w9"}}}'
+    printf '%s\n' '{"result":{"pane":{"pane_id":"w9:p9","tab_id":"w9:t1","workspace_id":"w9"}}}'
     ;;
   "plugin pane")
     printf '%s\n' '{"result":{"opened":true}}'
@@ -39,6 +42,17 @@ case "$1 $2" in
       exit 1
     fi
     printf '%s\n' '{"result":{"agent":{"pane_id":"w9:p9"}}}'
+    ;;
+  "tab get")
+    [ "${FAKE_TAB_GONE:-0}" != "1" ] || exit 1
+    printf '{"result":{"tab":{"tab_id":"%s"}}}\n' "${3:-}"
+    ;;
+  "tab rename")
+    if [ "${FAKE_TAB_RENAME_FAIL:-0}" = "1" ]; then
+      printf '%s\n' '{"error":{"code":"tab_not_found","message":"tab not found"}}' >&2
+      exit 1
+    fi
+    printf '%s\n' '{"result":{"tab":{"tab_id":"w9:t1"}}}'
     ;;
   "pane rename")
     if [ "${FAKE_PANE_RENAME_FAIL:-0}" = "1" ]; then
@@ -63,6 +77,7 @@ test_open() {
   env -u LIVE_PANE_ID "$script_dir/open.sh" >/dev/null
   grep -Fq 'pane current --current' "$HERDR_RENAME_TEST_LOG"
   grep -Fq -- '--placement popup' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq -- '--env HERDR_RENAME_MODE=pane-agent' "$HERDR_RENAME_TEST_LOG"
   grep -Fq -- '--env HERDR_RENAME_PANE_ID=w9:p9' "$HERDR_RENAME_TEST_LOG"
 
   : > "$HERDR_RENAME_TEST_LOG"
@@ -78,6 +93,18 @@ test_open() {
   grep -Fq -- '--env HERDR_RENAME_PANE_ID=w7:p7' "$HERDR_RENAME_TEST_LOG"
 
   : > "$HERDR_RENAME_TEST_LOG"
+  LIVE_PANE_ID="w7:p7" "$script_dir/open.sh" tab >/dev/null
+  grep -Fq -- '--env HERDR_RENAME_MODE=tab' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq -- '--env HERDR_RENAME_PANE_ID=w7:p7' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq -- '--env HERDR_RENAME_TAB_ID=w7:t1' "$HERDR_RENAME_TEST_LOG"
+
+  : > "$HERDR_RENAME_TEST_LOG"
+  env -u LIVE_PANE_ID "$script_dir/open.sh" agent >/dev/null
+  grep -Fq 'pane current --current' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq -- '--env HERDR_RENAME_MODE=agent' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq -- '--env HERDR_RENAME_PANE_ID=w9:p9' "$HERDR_RENAME_TEST_LOG"
+
+  : > "$HERDR_RENAME_TEST_LOG"
   if env -u LIVE_PANE_ID FAKE_CURRENT_FAIL=1 "$script_dir/open.sh" >/dev/null 2>&1; then
     printf 'expected missing caller context to fail\n' >&2
     return 1
@@ -86,6 +113,72 @@ test_open() {
 }
 
 test_rename() {
+  : > "$HERDR_RENAME_TEST_LOG"
+  HERDR_RENAME_MODE="tab" \
+    HERDR_RENAME_PANE_ID="w9:p9" \
+    HERDR_RENAME_TAB_ID="w9:t1" \
+    HERDR_RENAME_NAME="Build Logs" \
+    "$script_dir/rename.sh" >/dev/null
+  grep -Fq 'pane get w9:p9' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq 'tab get w9:t1' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq 'tab rename w9:t1 Build Logs' "$HERDR_RENAME_TEST_LOG"
+  ! grep -Fq 'agent rename ' "$HERDR_RENAME_TEST_LOG"
+
+  : > "$HERDR_RENAME_TEST_LOG"
+  FAKE_HAS_AGENT=1 \
+    HERDR_RENAME_MODE="agent" \
+    HERDR_RENAME_PANE_ID="w9:p9" \
+    HERDR_RENAME_NAME="reviewer-2" \
+    "$script_dir/rename.sh" >/dev/null
+  grep -Fq 'agent list' "$HERDR_RENAME_TEST_LOG"
+  grep -Fq 'agent rename w9:p9 reviewer-2' "$HERDR_RENAME_TEST_LOG"
+  ! grep -Fq 'pane rename ' "$HERDR_RENAME_TEST_LOG"
+
+  : > "$HERDR_RENAME_TEST_LOG"
+  if HERDR_RENAME_MODE="agent" \
+    HERDR_RENAME_PANE_ID="w9:p9" \
+    HERDR_RENAME_NAME="reviewer" \
+    "$script_dir/rename.sh" >/dev/null 2>&1; then
+    printf 'expected missing agent to fail\n' >&2
+    return 1
+  fi
+  ! grep -Fq 'agent rename ' "$HERDR_RENAME_TEST_LOG"
+
+  : > "$HERDR_RENAME_TEST_LOG"
+  if FAKE_PANE_DISAPPEARS=1 \
+    HERDR_RENAME_MODE="agent" \
+    HERDR_RENAME_PANE_ID="w9:p9" \
+    HERDR_RENAME_NAME="reviewer" \
+    "$script_dir/rename.sh" >/dev/null 2>&1; then
+    printf 'expected disappeared pane to fail\n' >&2
+    return 1
+  fi
+  ! grep -Fq 'agent rename ' "$HERDR_RENAME_TEST_LOG"
+
+  : > "$HERDR_RENAME_TEST_LOG"
+  if FAKE_TAB_GONE=1 \
+    HERDR_RENAME_MODE="tab" \
+    HERDR_RENAME_PANE_ID="w9:p9" \
+    HERDR_RENAME_TAB_ID="w9:t1" \
+    HERDR_RENAME_NAME="Build Logs" \
+    "$script_dir/rename.sh" >/dev/null 2>&1; then
+    printf 'expected disappeared tab to fail\n' >&2
+    return 1
+  fi
+  ! grep -Fq 'tab rename ' "$HERDR_RENAME_TEST_LOG"
+
+  : > "$HERDR_RENAME_TEST_LOG"
+  if failure_output="$(FAKE_TAB_RENAME_FAIL=1 \
+    HERDR_RENAME_MODE="tab" \
+    HERDR_RENAME_PANE_ID="w9:p9" \
+    HERDR_RENAME_TAB_ID="w9:t1" \
+    HERDR_RENAME_NAME="Build Logs" \
+    "$script_dir/rename.sh" 2>&1)"; then
+    printf 'expected tab rename failure\n' >&2
+    return 1
+  fi
+  printf '%s' "$failure_output" | grep -Fq 'tab not found'
+
   : > "$HERDR_RENAME_TEST_LOG"
   HERDR_RENAME_PANE_ID="w9:p9" \
     HERDR_RENAME_NAME="Build Logs" \
