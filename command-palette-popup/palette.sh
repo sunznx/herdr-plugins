@@ -36,6 +36,12 @@ die() {
   exit 1
 }
 
+# Avoid sourcing a full interactive shell, but keep the common Homebrew PATH
+# and fzf's standalone config when the Herdr server did not inherit them.
+PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+[ -n "${FZF_DEFAULT_OPTS_FILE:-}" ] || [ ! -r "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzfrc" ] || \
+  export FZF_DEFAULT_OPTS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzfrc"
+
 command -v fzf >/dev/null 2>&1 || die "command-palette-popup: fzf is not installed or not on PATH."
 command -v jq  >/dev/null 2>&1 || die "command-palette-popup: jq is not installed or not on PATH."
 

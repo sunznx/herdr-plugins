@@ -19,7 +19,7 @@ The palette replaces Herdr's native `Rename tab` and generic agent picker with
 the `sunznx.herdr-rename.tab` and `sunznx.herdr-rename.agent` actions. They run
 inline in the existing palette popup and target the tab or agent under it.
 
-The popup starts through the interactive `${SHELL:-/bin/zsh}`, so exported settings such as `FZF_DEFAULT_OPTS_FILE` are available to fzf.
+The popup runs `palette.sh` directly without loading an interactive shell.
 
 ## Requirements
 

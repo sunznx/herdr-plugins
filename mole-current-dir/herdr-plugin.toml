@@ -1,6 +1,6 @@
 id = "sunznx.mole-current-dir"
 name = "Mole Current Directory"
-version = "0.1.0"
+version = "0.1.1"
 min_herdr_version = "0.8.0"
 description = "Open a pane and run `mole analyze .` in the directory of the pane that triggered it."
 platforms = ["macos"]
@@ -15,4 +15,4 @@ command = ["bash", "open.sh"]
 id = "analyze"
 title = "Mole: current directory"
 placement = "split"
-command = ["bash", "-c", "exec \"${SHELL:-/bin/zsh}\" -ic 'exec mole analyze .'" ]
+command = ["mole", "analyze", "."]

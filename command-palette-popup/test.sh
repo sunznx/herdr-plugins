@@ -89,6 +89,8 @@ export HERDR_CONFIG_PATH="$tmp/config.toml"
 test_open() {
   : > "$CPP_TEST_LOG"
   grep -Fq 'placement = "popup"' "$script_dir/herdr-plugin.toml"
+  grep -Fq 'command = ["sh", "-c"' "$script_dir/herdr-plugin.toml"
+  grep -Fq 'exec \"$HERDR_PLUGIN_ROOT/palette.sh\"' "$script_dir/herdr-plugin.toml"
 
   LIVE_PANE_ID='w7:p7' \
     HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w5:p5","tab_id":"w5:t1","workspace_id":"w5","focused_pane_cwd":"/tmp"}' \

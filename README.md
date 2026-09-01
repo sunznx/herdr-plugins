@@ -11,9 +11,11 @@ Personal [Herdr](https://herdr.dev) plugins.
 | [command-palette-popup](command-palette-popup) | Searches Herdr native commands, live targets, and installed plugin actions from one fzf popup. |
 | [herdr-move](herdr-move) | Moves the triggering pane and its running agent into an existing workspace without reusing stale pane IDs. |
 | [herdr-rename](herdr-rename) | Renames the triggering pane and its detected agent from an fzf popup. |
+| [herdr-ai-rename](herdr-ai-rename) | Uses Codex to rename the triggering pane and agent, or every pane. |
 | [herdr-copy-last-command-output](herdr-copy-last-command-output) | Copies the most recent command output, with or without its command, to the macOS clipboard. |
 | [mole-current-dir](mole-current-dir) | Opens a pane and runs `mole analyze .` in the triggering pane's directory. |
 | [open-in](open-in) | Opens the triggering pane's current directory in Emacs, IntelliJ IDEA, or Fork. |
+| [herdr-new-codex](herdr-new-codex) | Opens a new Codex tab in a workspace selected with fzf. |
 
 ### yazi-popup
 
@@ -32,6 +34,7 @@ herdr plugin install sunznx/herdr-plugins/herdr-rename
 herdr plugin install sunznx/herdr-plugins/herdr-copy-last-command-output
 herdr plugin install sunznx/herdr-plugins/mole-current-dir
 herdr plugin install sunznx/herdr-plugins/open-in
+herdr plugin install sunznx/herdr-plugins/herdr-new-codex
 ```
 
 See each plugin's own README for setup details.

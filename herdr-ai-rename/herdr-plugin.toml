@@ -1,0 +1,18 @@
+id = "sunznx.herdr-ai-rename"
+name = "Herdr AI Rename"
+version = "0.4.0"
+min_herdr_version = "0.8.0"
+description = "Use Codex to name the current pane and agent, or every pane."
+platforms = ["macos"]
+
+[[actions]]
+id = "rename"
+title = "AI rename pane and agent"
+contexts = ["pane"]
+command = ["bash", "launch.sh", "current"]
+
+[[actions]]
+id = "rename-all"
+title = "AI rename all panes and agents"
+contexts = ["workspace"]
+command = ["bash", "launch.sh", "all"]

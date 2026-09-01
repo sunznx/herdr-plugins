@@ -6,7 +6,7 @@ Open a new Herdr pane in the triggering pane's directory and run:
 mole analyze .
 ```
 
-The analyzer starts through the interactive `${SHELL:-/bin/zsh}`, so it inherits the same exported environment as the user's shell.
+The analyzer starts directly without loading an interactive shell.
 
 ## Requirements
 
