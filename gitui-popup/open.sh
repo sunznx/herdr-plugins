@@ -13,10 +13,10 @@ if [ "${1:-}" = "--self-test" ]; then
 fi
 
 cwd=$(extract_cwd "${HERDR_PLUGIN_CONTEXT_JSON:-{}}" || true)
-[ -n "$cwd" ] && [ -d "$cwd" ] || { echo "lazygit-popup: current pane directory is unavailable." >&2; exit 1; }
+[ -n "$cwd" ] && [ -d "$cwd" ] || { echo "gitui-popup: current pane directory is unavailable." >&2; exit 1; }
 
 exec "${HERDR_BIN_PATH:-herdr}" plugin pane open \
-  --plugin sunznx.lazygit-popup \
-  --entrypoint lazygit \
+  --plugin sunznx.gitui-popup \
+  --entrypoint gitui \
   --focus \
   --cwd "$cwd"

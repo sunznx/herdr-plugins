@@ -1,0 +1,21 @@
+id = "sunznx.gitui-popup"
+name = "GitUI Popup"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Open GitUI in a popup rooted at the triggering pane's current directory."
+platforms = ["macos"]
+
+[[panes]]
+id = "gitui"
+title = "GitUI"
+placement = "popup"
+width = "80%"
+height = "80%"
+command = ["gitui"]
+
+[[actions]]
+id = "open"
+title = "Open GitUI"
+description = "Open GitUI in the triggering pane's current directory"
+contexts = ["workspace"]
+command = ["bash", "open.sh"]
