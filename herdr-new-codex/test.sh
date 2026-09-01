@@ -41,8 +41,10 @@ case "$1 $2" in
       pclose)
         if [ -f "$ARCHIVED" ]; then
           agent="" status=""
+        elif [ -f "$FAILED" ]; then
+          agent='codex' status='idle'
         elif [ -f "$BLOCKED" ]; then
-          agent='codex' status='blocked'
+          agent='codex' status='working'
         else
           agent='codex' status='idle'
         fi
@@ -52,10 +54,17 @@ case "$1 $2" in
       *) exit 1 ;;
     esac
     ;;
+  "pane read")
+    [ -f "$BLOCKED" ] && printf 'Archive this session?\n'
+    [ -f "$FAILED" ] && printf 'Failed to archive current thread: failed to archive session\n'
+    ;;
   "pane current") printf '%s\n' '{"result":{"pane":{"pane_id":"pclose","tab_id":"tclose","agent":"codex"}}}' ;;
   "agent prompt") [ "$3 $4" = "pclose /archive" ] && touch "$BLOCKED" ;;
-  "agent send-keys") [ "$3 $4 $5" = "pclose down enter" ] && touch "$ARCHIVED" ;;
-  "tab close") ;;
+  "agent send-keys")
+    [ "$3 $4 $5" = "pclose down enter" ]
+    if [ "${ARCHIVE_FAIL:-}" = 1 ]; then touch "$FAILED"; else touch "$ARCHIVED"; fi
+    ;;
+  "tab close") printf '%s\n' '{"error":{"code":"tab_not_found","message":"tab not found"}}' >&2; exit 1 ;;
   *) printf 'unexpected command: %s\n' "$*" >&2; exit 2 ;;
 esac
 SH
@@ -67,6 +76,7 @@ export NORMAL_DIR="$tmp/normal"
 export OTHER_DIR="$tmp/other"
 export ARCHIVED="$tmp/archived"
 export BLOCKED="$tmp/blocked"
+export FAILED="$tmp/failed"
 
 : >"$CALLS"
 "$root/open.sh" >/dev/null
@@ -103,9 +113,15 @@ PATH="$tmp/bin:$PATH" FZF_INPUT="$tmp/fzf-input" SCRATCH_EXISTS=1 "$root/picker.
 : >"$CALLS"
 rm -f "$ARCHIVED"
 rm -f "$BLOCKED"
+rm -f "$FAILED"
 env -u LIVE_PANE_ID HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"pclose"}' "$root/close.sh" >/dev/null
 grep -Fqx 'agent prompt pclose /archive' "$CALLS"
 grep -Fqx 'agent send-keys pclose down enter' "$CALLS"
+grep -Fqx 'tab close tclose' "$CALLS"
+
+: >"$CALLS"
+rm -f "$ARCHIVED" "$BLOCKED" "$FAILED"
+ARCHIVE_FAIL=1 env -u LIVE_PANE_ID HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"pclose"}' "$root/close.sh" >/dev/null
 grep -Fqx 'tab close tclose' "$CALLS"
 
 : >"$CALLS"

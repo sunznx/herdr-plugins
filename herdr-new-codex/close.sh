@@ -31,6 +31,12 @@ agent="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent // empty')"
 [ -n "$pane_id" ] && [ -n "$tab_id" ] || fail "could not resolve the current pane."
 [ "$agent" = "codex" ] || fail "the current pane is not running Codex."
 
+close_tab() {
+  result="$("$herdr_bin" tab close "$tab_id" 2>&1)" && exit 0
+  [ "$(printf '%s' "$result" | jq -r '.error.code // empty' 2>/dev/null)" = "tab_not_found" ] && exit 0
+  fail "could not close tab: $result"
+}
+
 "$herdr_bin" agent prompt "$pane_id" /archive >/dev/null \
   || fail "could not send /archive to Codex."
 
@@ -38,12 +44,18 @@ confirmed=false
 for _ in {1..100}; do
   pane_json="$("$herdr_bin" pane get "$pane_id" 2>/dev/null || true)"
   agent="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent // empty' 2>/dev/null)"
-  [ "$agent" = "codex" ] || exec "$herdr_bin" tab close "$tab_id"
+  [ "$agent" = "codex" ] || close_tab
   status="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent_status // empty' 2>/dev/null)"
-  if [ "$status" = "blocked" ] && [ "$confirmed" = false ]; then
+  recent="$("$herdr_bin" pane read "$pane_id" --source recent-unwrapped --lines 60 2>/dev/null || true)"
+  if [ "$confirmed" = false ] && {
+    [ "$status" = "blocked" ] ||
+      printf '%s' "$recent" | grep -Fq 'Archive this session?'
+  }; then
     "$herdr_bin" agent send-keys "$pane_id" down enter >/dev/null \
       || fail "could not confirm /archive."
     confirmed=true
+  elif [ "$confirmed" = true ] && printf '%s' "$recent" | grep -Fq 'Failed to archive current thread'; then
+    close_tab
   fi
   sleep 0.1
 done
