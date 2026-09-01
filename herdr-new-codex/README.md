@@ -7,7 +7,7 @@
 ## Actions
 
 - `sunznx.herdr-new-codex.codex`：选择 workspace 并新建 Codex tab。
-- `sunznx.herdr-new-codex.herdr-close-codex`：向当前 Codex 发送 `/archive`，等待 Codex 退出后关闭当前 tab。
+- `sunznx.herdr-new-codex.herdr-close-codex`：向当前 Codex 发送 `/archive`，确认归档，等待 Codex 退出后关闭当前 tab。
 
 ## 安装
 

@@ -39,15 +39,22 @@ case "$1 $2" in
   "pane get")
     case "$3" in
       pclose)
-        if [ -f "$ARCHIVED" ]; then agent=""; else agent='codex'; fi
-        printf '{"result":{"pane":{"pane_id":"pclose","tab_id":"tclose","agent":"%s"}}}\n' "$agent"
+        if [ -f "$ARCHIVED" ]; then
+          agent="" status=""
+        elif [ -f "$BLOCKED" ]; then
+          agent='codex' status='blocked'
+        else
+          agent='codex' status='idle'
+        fi
+        printf '{"result":{"pane":{"pane_id":"pclose","tab_id":"tclose","agent":"%s","agent_status":"%s"}}}\n' "$agent" "$status"
         ;;
       pother) printf '%s\n' '{"result":{"pane":{"pane_id":"pother","tab_id":"tother","agent":"claude"}}}' ;;
       *) exit 1 ;;
     esac
     ;;
   "pane current") printf '%s\n' '{"result":{"pane":{"pane_id":"pclose","tab_id":"tclose","agent":"codex"}}}' ;;
-  "agent prompt") [ "$3 $4" = "pclose /archive" ] && touch "$ARCHIVED" ;;
+  "agent prompt") [ "$3 $4" = "pclose /archive" ] && touch "$BLOCKED" ;;
+  "agent send-keys") [ "$3 $4 $5" = "pclose down enter" ] && touch "$ARCHIVED" ;;
   "tab close") ;;
   *) printf 'unexpected command: %s\n' "$*" >&2; exit 2 ;;
 esac
@@ -59,6 +66,7 @@ export CALLS="$tmp/calls"
 export NORMAL_DIR="$tmp/normal"
 export OTHER_DIR="$tmp/other"
 export ARCHIVED="$tmp/archived"
+export BLOCKED="$tmp/blocked"
 
 : >"$CALLS"
 "$root/open.sh" >/dev/null
@@ -94,8 +102,10 @@ PATH="$tmp/bin:$PATH" FZF_INPUT="$tmp/fzf-input" SCRATCH_EXISTS=1 "$root/picker.
 
 : >"$CALLS"
 rm -f "$ARCHIVED"
+rm -f "$BLOCKED"
 env -u LIVE_PANE_ID HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"pclose"}' "$root/close.sh" >/dev/null
 grep -Fqx 'agent prompt pclose /archive' "$CALLS"
+grep -Fqx 'agent send-keys pclose down enter' "$CALLS"
 grep -Fqx 'tab close tclose' "$CALLS"
 
 : >"$CALLS"
