@@ -46,6 +46,8 @@ case "$1 $2" in
           agent='codex' status='idle'
         elif [ -f "$BLOCKED" ]; then
           agent='codex' status='working'
+        elif [ -f "$WORKING" ]; then
+          agent='codex' status='working'
         else
           agent='codex' status='idle'
         fi
@@ -67,8 +69,12 @@ case "$1 $2" in
   "pane current") printf '%s\n' '{"result":{"pane":{"pane_id":"pclose","tab_id":"tclose","agent":"codex"}}}' ;;
   "agent prompt") [ "$3 $4" = "pclose /archive" ] && touch "$BLOCKED" ;;
   "agent send-keys")
-    [ "$3 $4 $5" = "pclose down enter" ]
-    if [ "${ARCHIVE_FAIL:-}" = 1 ]; then touch "$FAILED"; else touch "$ARCHIVED"; fi
+    if [ "$3 $4" = "pclose esc" ]; then
+      rm -f "$WORKING"
+    else
+      [ "$3 $4 $5" = "pclose down enter" ]
+      if [ "${ARCHIVE_FAIL:-}" = 1 ]; then touch "$FAILED"; else touch "$ARCHIVED"; fi
+    fi
     ;;
   "tab close") printf '%s\n' '{"error":{"code":"tab_not_found","message":"tab not found"}}' >&2; exit 1 ;;
   *) printf 'unexpected command: %s\n' "$*" >&2; exit 2 ;;
@@ -83,6 +89,7 @@ export OTHER_DIR="$tmp/other"
 export ARCHIVED="$tmp/archived"
 export BLOCKED="$tmp/blocked"
 export FAILED="$tmp/failed"
+export WORKING="$tmp/working"
 
 : >"$CALLS"
 "$root/open.sh" >/dev/null
@@ -130,6 +137,14 @@ grep -Fqx 'tab close tclose' "$CALLS"
 
 : >"$CALLS"
 rm -f "$ARCHIVED" "$BLOCKED" "$FAILED"
+touch "$WORKING"
+env -u LIVE_PANE_ID HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"pclose"}' "$root/close.sh" >/dev/null
+grep -Fqx 'agent send-keys pclose esc' "$CALLS"
+grep -Fqx 'agent prompt pclose /archive' "$CALLS"
+grep -Fqx 'tab close tclose' "$CALLS"
+
+: >"$CALLS"
+rm -f "$ARCHIVED" "$BLOCKED" "$FAILED" "$WORKING"
 ARCHIVE_FAIL=1 env -u LIVE_PANE_ID HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"pclose"}' "$root/close.sh" >/dev/null
 grep -Fqx 'tab close tclose' "$CALLS"
 

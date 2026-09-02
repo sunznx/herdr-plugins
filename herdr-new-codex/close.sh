@@ -28,6 +28,7 @@ fi
 pane_id="$(printf '%s' "$pane_json" | jq -r '.result.pane.pane_id // empty')"
 tab_id="$(printf '%s' "$pane_json" | jq -r '.result.pane.tab_id // empty')"
 agent="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent // empty')"
+status="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent_status // empty')"
 [ -n "$pane_id" ] && [ -n "$tab_id" ] || fail "could not resolve the current pane."
 [ "$agent" = "codex" ] || fail "the current pane is not running Codex."
 
@@ -36,6 +37,21 @@ close_tab() {
   [ "$(printf '%s' "$result" | jq -r '.error.code // empty' 2>/dev/null)" = "tab_not_found" ] && exit 0
   fail "could not close tab: $result"
 }
+
+if [ "$status" = "working" ] || [ "$status" = "blocked" ]; then
+  "$herdr_bin" agent send-keys "$pane_id" esc >/dev/null \
+    || fail "could not interrupt the current Codex task."
+  for _ in {1..100}; do
+    pane_json="$("$herdr_bin" pane get "$pane_id" 2>/dev/null || true)"
+    agent="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent // empty' 2>/dev/null)"
+    [ "$agent" = "codex" ] || close_tab
+    status="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent_status // empty' 2>/dev/null)"
+    [ "$status" = "idle" ] || [ "$status" = "done" ] || { sleep 0.1; continue; }
+    break
+  done
+  [ "$status" = "idle" ] || [ "$status" = "done" ] \
+    || fail "Codex did not stop the current task within 10 seconds; tab left open."
+fi
 
 "$herdr_bin" agent prompt "$pane_id" /archive >/dev/null \
   || fail "could not send /archive to Codex."
