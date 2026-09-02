@@ -36,6 +36,7 @@ case "$1 $2" in
     printf '{"result":{"root_pane":{"pane_id":"%s:p2"}}}\n' "$workspace"
     ;;
   "pane run") ;;
+  "pane send-keys") ;;
   "pane get")
     case "$3" in
       pclose)
@@ -55,8 +56,13 @@ case "$1 $2" in
     esac
     ;;
   "pane read")
-    [ -f "$BLOCKED" ] && printf 'Archive this session?\n'
-    [ -f "$FAILED" ] && printf 'Failed to archive current thread: failed to archive session\n'
+    case "$3" in
+      w2:p2|w4:p1) printf 'Do you trust the contents of this directory?\n' ;;
+      pclose)
+        [ -f "$BLOCKED" ] && printf 'Archive this session?\n'
+        [ -f "$FAILED" ] && printf 'Failed to archive current thread: failed to archive session\n'
+        ;;
+    esac
     ;;
   "pane current") printf '%s\n' '{"result":{"pane":{"pane_id":"pclose","tab_id":"tclose","agent":"codex"}}}' ;;
   "agent prompt") [ "$3 $4" = "pclose /archive" ] && touch "$BLOCKED" ;;
@@ -90,14 +96,17 @@ grep -Fqx 'pane run w1:p2 exec codex' "$CALLS"
 : >"$CALLS"
 SCRATCH_EXISTS=1 HERDR_NEW_CODEX_CHOICE=w2 TMPDIR="$tmp" "$root/picker.sh"
 grep -Eq "^tab create --workspace w2 --cwd $tmp/herdr-scratch-.{6} --focus$" "$CALLS"
-grep -Fq 'pane run w2:p2 exec codex -c projects.\"' "$CALLS"
-grep -Fq '.trust_level=\"trusted\"' "$CALLS"
+grep -Fqx 'pane run w2:p2 exec codex' "$CALLS"
+grep -Fqx 'pane read w2:p2 --source visible --lines 60' "$CALLS"
+grep -Fqx 'pane send-keys w2:p2 enter' "$CALLS"
 
 : >"$CALLS"
 HERDR_NEW_CODEX_CHOICE=__scratch__ TMPDIR="$tmp" "$root/picker.sh"
 grep -Eq "^workspace create --label scratch --cwd $tmp/herdr-scratch-.{6} --focus$" "$CALLS"
-grep -Fq 'pane run w4:p1 exec codex -c projects.\"' "$CALLS"
-grep -Fq '.trust_level=\"trusted\"' "$CALLS"
+grep -Fqx 'pane run w4:p1 exec codex' "$CALLS"
+grep -Fqx 'pane read w4:p1 --source visible --lines 60' "$CALLS"
+grep -Fqx 'pane send-keys w4:p1 enter' "$CALLS"
+! grep -Fq 'trust_level' "$CALLS"
 
 cat >"$tmp/bin/fzf" <<'SH'
 #!/usr/bin/env bash

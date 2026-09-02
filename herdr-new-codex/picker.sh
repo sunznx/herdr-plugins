@@ -66,11 +66,19 @@ fi
 pane_id="$(printf '%s' "$created" | jq -r '.result.root_pane.pane_id // empty')"
 [ -n "$pane_id" ] || fail "Herdr did not return a root pane."
 
-codex_command="exec codex"
-if [ "$scratch" = true ]; then
-  canonical_cwd="$(cd "$cwd" && pwd -P)"
-  trust_config="projects.\"$canonical_cwd\".trust_level=\"trusted\""
-  printf -v codex_command 'exec codex -c %q' "$trust_config"
+if [ "$scratch" = false ]; then
+  exec "$herdr_bin" pane run "$pane_id" "exec codex"
 fi
 
-exec "$herdr_bin" pane run "$pane_id" "$codex_command"
+"$herdr_bin" pane run "$pane_id" "exec codex" || fail "could not start Codex."
+for _ in {1..100}; do
+  screen="$("$herdr_bin" pane read "$pane_id" --source visible --lines 60 2>/dev/null || true)"
+  case "$screen" in
+    *"Do you trust the contents of this directory?"*)
+      exec "$herdr_bin" pane send-keys "$pane_id" enter
+      ;;
+  esac
+  sleep 0.1
+done
+
+fail "Codex trust prompt did not appear within 10 seconds."
