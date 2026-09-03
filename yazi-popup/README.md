@@ -11,7 +11,7 @@ Open [Yazi](https://yazi-rs.github.io/) over the triggering Herdr pane with four
 
 ![Picking a file in the popup, typed back as @path into the composer](../_demo/yazi-popup/picker.gif)
 
-Yazi loads the user's normal configuration without starting another interactive shell. Existing `FZF_DEFAULT_OPTS` and `FZF_DEFAULT_OPTS_FILE` values are preserved; when `FZF_DEFAULT_OPTS_FILE` is unset, the plugin automatically uses `${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzfrc` if that file exists.
+Yazi loads the user's normal configuration without starting another interactive shell. Its popup launcher preserves existing `FZF_DEFAULT_OPTS` and `FZF_DEFAULT_OPTS_FILE`; when `FZF_DEFAULT_OPTS_FILE` is unset, it uses `${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzfrc` if that file exists.
 
 ## Requirements
 
@@ -21,6 +21,7 @@ Yazi loads the user's normal configuration without starting another interactive 
 - [`fr.yazi`](https://github.com/lpnh/fg.yazi), installed with `ya pkg add lpnh/fr`
 - `rg` and `bat` for the `rg` action
 - A `.trellis` directory for the `trellis` action
+- Go 1.24+（仅安装或本地构建时需要）
 
 ## Install
 

@@ -10,8 +10,7 @@ Personal [Herdr](https://herdr.dev) plugins.
 | [gitui-popup](gitui-popup) | Opens [GitUI](https://github.com/gitui-org/gitui) in an `80% × 80%` popup rooted at the triggering pane's directory. |
 | [command-palette-popup](command-palette-popup) | Searches Herdr native commands, live targets, and installed plugin actions from one fzf popup. |
 | [herdr-move](herdr-move) | Moves the triggering pane and its running agent into an existing workspace without reusing stale pane IDs. |
-| [herdr-rename](herdr-rename) | Renames the triggering pane and its detected agent from an fzf popup. |
-| [herdr-ai-rename](herdr-ai-rename) | Uses Codex to rename the triggering pane and agent, or every pane. |
+| [herdr-ai-rename](herdr-ai-rename) | Renames panes, tabs, and agents manually or with Codex. |
 | [herdr-copy-last-command-output](herdr-copy-last-command-output) | Copies the most recent command output, with or without its command, to the macOS clipboard. |
 | [mole-current-dir](mole-current-dir) | Opens a pane and runs `mole analyze .` in the triggering pane's directory. |
 | [open-in](open-in) | Opens the triggering pane's current directory in Emacs, IntelliJ IDEA, or Fork. |
@@ -30,7 +29,7 @@ herdr plugin install sunznx/herdr-plugins/yazi-popup
 herdr plugin install sunznx/herdr-plugins/gitui-popup
 herdr plugin install sunznx/herdr-plugins/command-palette-popup
 herdr plugin install sunznx/herdr-plugins/herdr-move
-herdr plugin install sunznx/herdr-plugins/herdr-rename
+herdr plugin install sunznx/herdr-plugins/herdr-ai-rename
 herdr plugin install sunznx/herdr-plugins/herdr-copy-last-command-output
 herdr plugin install sunznx/herdr-plugins/mole-current-dir
 herdr plugin install sunznx/herdr-plugins/open-in
@@ -39,8 +38,12 @@ herdr plugin install sunznx/herdr-plugins/herdr-new-codex
 
 See each plugin's own README for setup details.
 
+All plugins are built from the shared Go runtime in this repository. Installation
+or local linking requires Go 1.24+; the resulting plugin binary has no Go or shell
+runtime dependency.
+
 ## Credits
 
 - `yazi-popup` originates from [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup) and is extended here with fzf navigation, `fr.yazi` real-time rg, and `.trellis` workflows.
 - `command-palette-popup` combines ideas and code from [enekos/herdr-quick-actions](https://github.com/enekos/herdr-quick-actions) and [JanTvrdik/herdr-command-palette](https://github.com/JanTvrdik/herdr-command-palette). Their MIT notices are retained in the plugin's [LICENSE](command-palette-popup/LICENSE).
-- `gitui-popup`, `herdr-move`, `herdr-rename`, `mole-current-dir`, and `open-in` reuse the Herdr context and pane-launching patterns demonstrated by `yazi-popup`; their task-specific behavior was added in this repository. `gitui-popup` runs [GitUI](https://github.com/gitui-org/gitui).
+- `gitui-popup`, `herdr-move`, `herdr-ai-rename`, `mole-current-dir`, and `open-in` reuse the Herdr context and pane-launching patterns demonstrated by `yazi-popup`; their task-specific behavior was added in this repository. `gitui-popup` runs [GitUI](https://github.com/gitui-org/gitui).

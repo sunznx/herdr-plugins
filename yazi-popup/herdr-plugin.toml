@@ -1,9 +1,12 @@
 id = "sunznx.yazi-popup"
 name = "Yazi Popup"
-version = "0.3.1"
+version = "0.3.2"
 min_herdr_version = "0.8.0"
 description = "Open Yazi popups for file picking, fzf navigation, real-time rg content search, and .trellis browsing."
 platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
 
 [[panes]]
 id = "picker"
@@ -11,7 +14,7 @@ title = "Yazi Picker"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/picker.sh\""]
+command = ["./herdr-plugin", "yazi", "picker"]
 
 [[panes]]
 id = "fzf"
@@ -19,7 +22,7 @@ title = "Yazi fzf"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/browser.sh\" fzf"]
+command = ["./herdr-plugin", "yazi", "browser", "fzf"]
 
 [[panes]]
 id = "rg"
@@ -27,7 +30,7 @@ title = "Yazi fr"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/browser.sh\" rg"]
+command = ["./herdr-plugin", "yazi", "browser", "rg"]
 
 [[panes]]
 id = "trellis"
@@ -35,32 +38,32 @@ title = "Trellis"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/browser.sh\" trellis"]
+command = ["./herdr-plugin", "yazi", "browser", "trellis"]
 
 [[actions]]
 id = "pick"
 title = "Pick file with Yazi"
 description = "Open a Yazi popup and insert the picked path(s) as @path into the pane that triggered it"
 contexts = ["workspace"]
-command = ["bash", "bin/open.sh", "pick"]
+command = ["./herdr-plugin", "yazi", "open", "pick"]
 
 [[actions]]
 id = "fzf"
 title = "Open Yazi fzf"
 description = "Open Yazi and immediately enter its built-in fzf file navigator"
 contexts = ["workspace"]
-command = ["bash", "bin/open.sh", "fzf"]
+command = ["./herdr-plugin", "yazi", "open", "fzf"]
 
 [[actions]]
 id = "rg"
 title = "Search contents with fr.yazi"
 description = "Open Yazi and immediately enter fr.yazi's real-time rg content search"
 contexts = ["workspace"]
-command = ["bash", "bin/open.sh", "rg"]
+command = ["./herdr-plugin", "yazi", "open", "rg"]
 
 [[actions]]
 id = "trellis"
 title = "Open .trellis in Yazi"
 description = "Browse the current directory's .trellis folder in reverse filename order"
 contexts = ["workspace"]
-command = ["bash", "bin/open.sh", "trellis"]
+command = ["./herdr-plugin", "yazi", "open", "trellis"]

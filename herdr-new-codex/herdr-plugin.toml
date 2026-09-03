@@ -1,21 +1,24 @@
 id = "sunznx.herdr-new-codex"
 name = "Herdr New Codex"
-version = "0.1.5"
+version = "0.1.6"
 min_herdr_version = "0.8.0"
 description = "Choose a workspace and open a new Codex tab."
 platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
 
 [[actions]]
 id = "codex"
 title = "New Codex tab"
 contexts = ["workspace"]
-command = ["bash", "open.sh"]
+command = ["./herdr-plugin", "new-codex", "open"]
 
 [[actions]]
 id = "herdr-close-codex"
-title = "Archive and close Codex tab"
+title = "Archive and close Codex pane"
 contexts = ["pane"]
-command = ["bash", "close.sh"]
+command = ["./herdr-plugin", "new-codex", "close"]
 
 [[panes]]
 id = "picker"
@@ -23,4 +26,4 @@ title = "New Codex tab"
 placement = "popup"
 width = 64
 height = 20
-command = ["bash", "picker.sh"]
+command = ["./herdr-plugin", "new-codex", "picker"]

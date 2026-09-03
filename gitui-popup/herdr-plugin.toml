@@ -1,9 +1,12 @@
 id = "sunznx.gitui-popup"
 name = "GitUI Popup"
-version = "0.1.0"
+version = "0.1.1"
 min_herdr_version = "0.8.0"
 description = "Open GitUI in a popup rooted at the triggering pane's current directory."
 platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
 
 [[panes]]
 id = "gitui"
@@ -18,4 +21,4 @@ id = "open"
 title = "Open GitUI"
 description = "Open GitUI in the triggering pane's current directory"
 contexts = ["workspace"]
-command = ["bash", "open.sh"]
+command = ["./herdr-plugin", "gitui", "open"]

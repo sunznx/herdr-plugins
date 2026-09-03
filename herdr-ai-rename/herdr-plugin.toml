@@ -1,18 +1,50 @@
 id = "sunznx.herdr-ai-rename"
 name = "Herdr AI Rename"
-version = "0.4.0"
+version = "0.5.1"
 min_herdr_version = "0.8.0"
-description = "Use Codex to name the current pane and agent, or every pane."
+description = "Rename panes, tabs, and agents manually or with Codex."
 platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
 
 [[actions]]
 id = "rename"
 title = "AI rename pane and agent"
 contexts = ["pane"]
-command = ["bash", "launch.sh", "current"]
+command = ["./herdr-plugin", "rename", "ai-current"]
 
 [[actions]]
 id = "rename-all"
 title = "AI rename all panes and agents"
 contexts = ["workspace"]
-command = ["bash", "launch.sh", "all"]
+command = ["./herdr-plugin", "rename", "ai-all"]
+
+[[actions]]
+id = "open"
+title = "Rename pane and agent"
+description = "Rename the current pane and its detected agent"
+contexts = ["pane"]
+command = ["./herdr-plugin", "rename", "open", "pane-agent"]
+
+[[actions]]
+id = "tab"
+title = "Rename tab"
+description = "Rename the tab containing the current pane"
+contexts = ["pane"]
+command = ["./herdr-plugin", "rename", "open", "tab"]
+
+[[actions]]
+id = "agent"
+title = "Rename agent"
+description = "Rename the agent running in the current pane"
+contexts = ["pane"]
+command = ["./herdr-plugin", "rename", "open", "agent"]
+
+[[panes]]
+id = "picker"
+title = "Herdr rename"
+placement = "popup"
+width = 64
+height = 8
+command = ["./herdr-plugin", "rename", "picker"]

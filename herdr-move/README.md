@@ -8,7 +8,8 @@ The plugin resolves the live pane ID before opening its picker. This avoids pass
 
 - Herdr ≥ 0.8.0
 - `fzf`
-- `jq`
+- `git` and `zoxide` for directory-backed workspace candidates
+- Go 1.24+（仅安装或本地构建时需要）
 
 ## Install
 
@@ -42,8 +43,5 @@ When a shortcut invokes the action without `LIVE_PANE_ID`, the plugin resolves t
 ## Development
 
 ```bash
-bash -n open.sh move.sh move-to-tab.sh test.sh
-./open.sh --self-test
-./move.sh --self-test
-./move-to-tab.sh --self-test
+go test ./...
 ```

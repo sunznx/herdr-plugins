@@ -1,18 +1,21 @@
 id = "sunznx.command-palette-popup"
 name = "Command Palette Popup"
-version = "0.2.8"
+version = "0.2.9"
 min_herdr_version = "0.8.0"
 description = "One fzf popup for Herdr native commands, live navigation targets, and actions from installed plugins."
 platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
 
 [[actions]]
 id = "open"
 title = "Command palette"
 contexts = ["workspace"]
-command = ["bash", "open.sh"]
+command = ["./herdr-plugin", "palette", "open"]
 
 [[panes]]
 id = "palette"
 title = "Command palette"
 placement = "popup"
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/palette.sh\""]
+command = ["./herdr-plugin", "palette", "run"]

@@ -1,15 +1,18 @@
 id = "sunznx.mole-current-dir"
 name = "Mole Current Directory"
-version = "0.1.1"
+version = "0.1.2"
 min_herdr_version = "0.8.0"
 description = "Open a pane and run `mole analyze .` in the directory of the pane that triggered it."
 platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
 
 [[actions]]
 id = "open"
 title = "Analyze current directory with Mole"
 contexts = ["workspace"]
-command = ["bash", "open.sh"]
+command = ["./herdr-plugin", "mole", "open"]
 
 [[panes]]
 id = "analyze"
