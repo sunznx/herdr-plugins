@@ -1,8 +1,8 @@
 id = "sunznx.yazi-popup"
 name = "Yazi Popup"
-version = "0.3.2"
+version = "0.3.4"
 min_herdr_version = "0.8.0"
-description = "Open Yazi popups for file picking, fzf navigation, real-time rg content search, and .trellis browsing."
+description = "Open Yazi popups for file picking, fzf navigation, and real-time rg content search."
 platforms = ["macos"]
 
 [[build]]
@@ -32,14 +32,6 @@ width = "80%"
 height = "80%"
 command = ["./herdr-plugin", "yazi", "browser", "rg"]
 
-[[panes]]
-id = "trellis"
-title = "Trellis"
-placement = "popup"
-width = "80%"
-height = "80%"
-command = ["./herdr-plugin", "yazi", "browser", "trellis"]
-
 [[actions]]
 id = "pick"
 title = "Pick file with Yazi"
@@ -60,10 +52,3 @@ title = "Search contents with fr.yazi"
 description = "Open Yazi and immediately enter fr.yazi's real-time rg content search"
 contexts = ["workspace"]
 command = ["./herdr-plugin", "yazi", "open", "rg"]
-
-[[actions]]
-id = "trellis"
-title = "Open .trellis in Yazi"
-description = "Browse the current directory's .trellis folder in reverse filename order"
-contexts = ["workspace"]
-command = ["./herdr-plugin", "yazi", "open", "trellis"]

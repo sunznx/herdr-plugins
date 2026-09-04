@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +46,29 @@ func openIn(ctx context.Context, c herdr.Client, application string) error {
 	return cmd.Run()
 }
 
+func yaziPopupCWD() string {
+	if cwd := os.Getenv("HERDR_YAZI_CWD"); cwd != "" {
+		return cwd
+	}
+	context := herdr.PluginContext()
+	if context.FocusedCWD != "" {
+		return context.FocusedCWD
+	}
+	return context.WorkspaceCWD
+}
+
+func chdirYaziPopup() error {
+	cwd := yaziPopupCWD()
+	if cwd == "" {
+		return nil
+	}
+	info, err := os.Stat(cwd)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("Yazi popup directory is unavailable: %s", cwd)
+	}
+	return os.Chdir(cwd)
+}
+
 func yaziOpen(ctx context.Context, c herdr.Client, mode string) error {
 	plugin := envOr("HERDR_PLUGIN_ID", "sunznx.yazi-popup")
 	context := herdr.PluginContext()
@@ -59,25 +81,29 @@ func yaziOpen(ctx context.Context, c herdr.Client, mode string) error {
 		if target == "" {
 			return nil
 		}
-		return c.OpenPane(ctx, plugin, "picker", true, cwd, "HERDR_TARGET_PANE_ID="+target)
+		env := []string{"HERDR_TARGET_PANE_ID=" + target}
+		if cwd != "" {
+			env = append(env, "HERDR_YAZI_CWD="+cwd)
+		}
+		return c.OpenPane(ctx, plugin, "picker", true, "", env...)
 	}
-	if mode != "fzf" && mode != "rg" && mode != "trellis" {
+	if mode != "fzf" && mode != "rg" {
 		return fmt.Errorf("unknown Yazi mode %q", mode)
-	}
-	if mode == "trellis" {
-		cwd = filepath.Join(cwd, ".trellis")
 	}
 	info, err := os.Stat(cwd)
 	if err != nil || !info.IsDir() {
 		return fmt.Errorf("directory is unavailable: %s", cwd)
 	}
-	return c.OpenPane(ctx, plugin, mode, true, cwd)
+	return c.OpenPane(ctx, plugin, mode, true, "", "HERDR_YAZI_CWD="+cwd)
 }
 
 func yaziPicker(ctx context.Context, c herdr.Client) error {
 	target := os.Getenv("HERDR_TARGET_PANE_ID")
 	if target == "" {
 		return fmt.Errorf("target pane ID is missing")
+	}
+	if err := chdirYaziPopup(); err != nil {
+		return err
 	}
 	file, err := os.CreateTemp("", "herdr-yazi-chooser-*")
 	if err != nil {
@@ -115,6 +141,9 @@ func yaziPicker(ctx context.Context, c herdr.Client) error {
 }
 
 func yaziBrowser(ctx context.Context, mode string) error {
+	if err := chdirYaziPopup(); err != nil {
+		return err
+	}
 	pid := strconv.Itoa(os.Getpid())
 	var emit []string
 	switch mode {
@@ -122,8 +151,6 @@ func yaziBrowser(ctx context.Context, mode string) error {
 		emit = []string{"emit-to", pid, "plugin", "fzf"}
 	case "rg":
 		emit = []string{"emit-to", pid, "plugin", "fr", "rg"}
-	case "trellis":
-		emit = []string{"emit-to", pid, "sort", "natural", "--reverse=yes"}
 	default:
 		return fmt.Errorf("unknown Yazi browser mode %q", mode)
 	}

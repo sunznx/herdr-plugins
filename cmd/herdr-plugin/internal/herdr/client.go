@@ -34,6 +34,32 @@ type Context struct {
 	WorkspaceCWD  string `json:"workspace_cwd"`
 }
 
+type TargetContext struct {
+	Pane      string `json:"pane"`
+	Tab       string `json:"tab"`
+	Workspace string `json:"workspace"`
+	CWD       string `json:"cwd"`
+}
+
+func MergePopupContext(base TargetContext, popup Context) TargetContext {
+	if popup.FocusedPaneID == "" {
+		return base
+	}
+	base.Pane = popup.FocusedPaneID
+	if popup.TabID != "" {
+		base.Tab = popup.TabID
+	}
+	if popup.WorkspaceID != "" {
+		base.Workspace = popup.WorkspaceID
+	}
+	if popup.FocusedCWD != "" {
+		base.CWD = popup.FocusedCWD
+	} else if popup.WorkspaceCWD != "" {
+		base.CWD = popup.WorkspaceCWD
+	}
+	return base
+}
+
 func New() Client {
 	bin := os.Getenv("HERDR_BIN_PATH")
 	if bin == "" {
@@ -67,8 +93,8 @@ func readOnly(args []string) bool {
 	}
 	key := args[0] + " " + args[1]
 	switch key {
-	case "pane list", "pane get", "pane current", "pane read",
-		"tab list", "tab get", "workspace list", "agent list", "worktree list",
+	case "pane list", "pane get", "pane current", "pane read", "pane wait-output",
+		"tab list", "tab get", "workspace list", "agent list", "agent wait", "worktree list",
 		"plugin config-dir":
 		return true
 	case "plugin action", "plugin log":

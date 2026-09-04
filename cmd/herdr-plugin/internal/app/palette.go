@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,13 +16,6 @@ import (
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/herdr"
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/workspacepicker"
 )
-
-type paletteContext struct {
-	Pane      string `json:"pane"`
-	Tab       string `json:"tab"`
-	Workspace string `json:"workspace"`
-	CWD       string `json:"cwd"`
-}
 
 type paletteItem struct {
 	Kind, Payload, Title, Keywords, Hint, Key, Usage string
@@ -87,29 +79,16 @@ func paletteOpen(ctx context.Context, c herdr.Client) error {
 	if paneCWD := herdr.PaneCWD(pane); cwd == "" {
 		cwd = paneCWD
 	}
-	forwarded, _ := json.Marshal(paletteContext{Pane: pane.PaneID, Tab: pane.TabID, Workspace: pane.WorkspaceID, CWD: cwd})
+	forwarded, _ := json.Marshal(herdr.TargetContext{Pane: pane.PaneID, Tab: pane.TabID, Workspace: pane.WorkspaceID, CWD: cwd})
 	return c.OpenPane(ctx, envOr("HERDR_PLUGIN_ID", "sunznx.command-palette-popup"), "palette", true, "", "CPP_CONTEXT_JSON="+string(forwarded))
 }
 
 func palette(ctx context.Context, c herdr.Client) error {
-	pc := paletteContext{}
+	pc := herdr.TargetContext{}
 	_ = json.Unmarshal([]byte(os.Getenv("CPP_CONTEXT_JSON")), &pc)
 	popup := herdr.PluginContext()
+	pc = herdr.MergePopupContext(pc, popup)
 	popupPane := popup.FocusedPaneID
-	if popupPane != "" {
-		pc.Pane = popupPane
-		if popup.TabID != "" {
-			pc.Tab = popup.TabID
-		}
-		if popup.WorkspaceID != "" {
-			pc.Workspace = popup.WorkspaceID
-		}
-		if popup.FocusedCWD != "" {
-			pc.CWD = popup.FocusedCWD
-		} else if popup.WorkspaceCWD != "" {
-			pc.CWD = popup.WorkspaceCWD
-		}
-	}
 	items, state, err := buildPalette(ctx, c, pc)
 	if err != nil {
 		return err
@@ -151,11 +130,11 @@ type paletteState struct {
 	Agents     []agentRow
 }
 
-func buildPalette(ctx context.Context, c herdr.Client, pc paletteContext) ([]paletteItem, paletteState, error) {
+func buildPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext) ([]paletteItem, paletteState, error) {
 	usageDirOut, _ := c.Run(ctx, "plugin", "config-dir", "sunznx.command-palette-popup")
 	usageDir := strings.TrimSpace(string(usageDirOut))
 	usage := readUsage(filepath.Join(usageDir, "usage.json"))
-	enableWorktree := configBool(envOr("CPP_CONFIG_PATH", filepath.Join(usageDir, "config.toml")), "enable_worktree")
+	enableWorktree := herdr.ConfigBool(envOr("CPP_CONFIG_PATH", filepath.Join(usageDir, "config.toml")), "", "enable_worktree")
 	keys := effectiveKeys(ctx, c)
 	items := append([]paletteItem(nil), staticPaletteItems...)
 	if enableWorktree {
@@ -287,7 +266,7 @@ func renderPalette(items []paletteItem) string {
 	return out.String()
 }
 
-func dispatchPalette(ctx context.Context, c herdr.Client, pc paletteContext, popupPane, kind, payload string, state paletteState) error {
+func dispatchPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext, popupPane, kind, payload string, state paletteState) error {
 	if kind == "goto_tab" {
 		_, err := c.Run(ctx, "tab", "focus", payload)
 		return err
@@ -627,7 +606,7 @@ func pickAgent(ctx context.Context, agents []agentRow) (string, error) {
 	}
 	return nestedPick(ctx, rows.String(), "agent ▸ ")
 }
-func paletteStartAgent(ctx context.Context, c herdr.Client, pc paletteContext) error {
+func paletteStartAgent(ctx context.Context, c herdr.Client, pc herdr.TargetContext) error {
 	out, _ := c.Run(ctx, "completion", "zsh")
 	re := regexp.MustCompile(`--kind\[Supported agent kind[^()]*\(([^)]*)\)`)
 	kinds := []string{"claude", "codex", "gemini", "cursor", "opencode", "copilot", "amp", "droid"}
@@ -768,27 +747,11 @@ func recordUsage(ctx context.Context, c herdr.Client, id string) {
 		_ = os.Rename(tmpPath, path)
 	}
 }
-func configBool(path, key string) bool {
-	file, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.SplitN(scanner.Text(), "#", 2)[0]
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 && strings.TrimSpace(parts[0]) == key {
-			return strings.TrimSpace(parts[1]) == "true"
-		}
-	}
-	return false
-}
 func effectiveKeys(ctx context.Context, c herdr.Client) map[string]string {
 	keys := map[string]string{}
 	out, _ := c.Run(ctx, "--default-config")
 	parseKeyTable(string(out), true, keys)
-	path := envOr("HERDR_CONFIG_PATH", filepath.Join(envOr("HOME", ""), ".config", "herdr", "config.toml"))
+	path := herdr.ConfigPath()
 	data, _ := os.ReadFile(path)
 	parseKeyTable(string(data), false, keys)
 	shadowed := commandKeys(string(data))
@@ -820,7 +783,7 @@ func commandKeys(data string) map[string]bool {
 }
 func parseKeyTable(data string, uncomment bool, dst map[string]string) {
 	inKeys := false
-	re := regexp.MustCompile(`^\s*([a-z_][a-z0-9_]*)\s*=\s*"([^"]*)"`)
+	re := regexp.MustCompile(`^\s*([a-z_][a-z0-9_]*)\s*=\s*(?:\[\s*)?"([^"]*)"`)
 	for _, line := range strings.Split(data, "\n") {
 		if uncomment {
 			line = strings.TrimSpace(line)

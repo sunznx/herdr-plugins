@@ -1,13 +1,12 @@
 # yazi-popup
 
-Open [Yazi](https://yazi-rs.github.io/) over the triggering Herdr pane with four focused workflows:
+Open [Yazi](https://yazi-rs.github.io/) over the triggering Herdr pane with three focused workflows:
 
 | Action | Behavior |
 | --- | --- |
 | `sunznx.yazi-popup.pick` | Pick files and type them back into the triggering pane as unsubmitted `@path` references. |
 | `sunznx.yazi-popup.fzf` | Open Yazi in the current directory and immediately enter its built-in fzf file navigator. |
 | `sunznx.yazi-popup.rg` | Open Yazi in the current directory and immediately enter `fr.yazi` real-time `rg` content search. |
-| `sunznx.yazi-popup.trellis` | Open the current directory's `.trellis` folder with filenames sorted naturally in reverse order. |
 
 ![Picking a file in the popup, typed back as @path into the composer](../_demo/yazi-popup/picker.gif)
 
@@ -20,7 +19,6 @@ Yazi loads the user's normal configuration without starting another interactive 
 - `fzf` for the `fzf` action and `fr.yazi` search interface
 - [`fr.yazi`](https://github.com/lpnh/fg.yazi), installed with `ya pkg add lpnh/fr`
 - `rg` and `bat` for the `rg` action
-- A `.trellis` directory for the `trellis` action
 - Go 1.24+（仅安装或本地构建时需要）
 
 ## Install
@@ -44,15 +42,10 @@ type = "plugin_action"
 command = "sunznx.yazi-popup.rg"
 description = "Search contents with fr.yazi"
 
-[[keys.command]]
-key = "prefix+t"
-type = "plugin_action"
-command = "sunznx.yazi-popup.trellis"
-description = "Open .trellis in Yazi"
 ```
 
 Reload the Herdr configuration after installing or changing keybindings.
 
 ## Credits
 
-The original popup picker was created in [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup). This fork adds the `fzf`, `fr.yazi` real-time `rg`, and `trellis` workflows, uses the `sunznx.yazi-popup` plugin ID, and avoids interactive-shell startup latency.
+The original popup picker was created in [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup). This fork adds the `fzf` and `fr.yazi` real-time `rg` workflows, uses the `sunznx.yazi-popup` plugin ID, and avoids interactive-shell startup latency.

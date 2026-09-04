@@ -9,7 +9,7 @@ func TestCommandTree(t *testing.T) {
 		{"move", "open"}, {"move", "open-tab"}, {"move", "workspace"}, {"move", "tab"},
 		{"rename", "ai-current"}, {"rename", "ai-all"}, {"rename", "open", "pane-agent"}, {"rename", "picker"},
 		{"new-codex", "open"}, {"new-codex", "picker"}, {"new-codex", "close"},
-		{"yazi", "open", "pick"}, {"yazi", "picker"}, {"yazi", "browser", "fzf"},
+		{"yazi", "open", "pick"}, {"yazi", "open", "fzf"}, {"yazi", "open", "rg"}, {"yazi", "picker"}, {"yazi", "browser", "fzf"},
 		{"palette", "open"}, {"palette", "run"},
 	}
 	root := NewCommand()
@@ -28,12 +28,22 @@ func TestCommandTree(t *testing.T) {
 }
 
 func TestCommandTreeRejectsInvalidMode(t *testing.T) {
-	root := NewCommand()
-	cmd, args, err := root.Find([]string{"yazi", "open", "invalid"})
-	if err != nil {
-		t.Fatal(err)
+	for _, mode := range []string{"invalid", "trellis"} {
+		root := NewCommand()
+		cmd, args, err := root.Find([]string{"yazi", "open", mode})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := cmd.Args(cmd, args); err == nil {
+			t.Fatalf("expected mode %q to be rejected", mode)
+		}
 	}
-	if err := cmd.Args(cmd, args); err == nil {
-		t.Fatal("expected invalid mode to be rejected")
+}
+
+func TestDisplayKeyReadsIndexedArrayBinding(t *testing.T) {
+	keys := map[string]string{}
+	parseKeyTable("[keys]\nfocus_agent = [\"alt+1..9\"]\nprefix = \"ctrl+x\"\n", false, keys)
+	if got := displayKey(keys, "focus_agent", 2); got != "alt+2" {
+		t.Fatalf("displayKey() = %q, want alt+2", got)
 	}
 }

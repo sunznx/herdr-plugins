@@ -1,0 +1,24 @@
+id = "sunznx.popup-zoxide"
+name = "Popup zoxide"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Search zoxide directories with fzf, insert the selection into the triggering pane, and copy it to the clipboard."
+platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
+
+[[panes]]
+id = "picker"
+title = "zoxide"
+placement = "popup"
+width = "70%"
+height = "70%"
+command = ["./herdr-plugin", "zoxide", "picker"]
+
+[[actions]]
+id = "open"
+title = "Open zoxide"
+description = "Search zoxide directories with fzf and insert the selected path"
+contexts = ["workspace"]
+command = ["./herdr-plugin", "zoxide", "open"]

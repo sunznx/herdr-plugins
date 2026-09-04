@@ -1,8 +1,6 @@
 package workspacepicker
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -13,6 +11,7 @@ import (
 
 	sharedfzf "github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/fzf"
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/herdr"
+	sharedzoxide "github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/zoxide"
 )
 
 type Kind string
@@ -126,8 +125,7 @@ func loadCandidates(ctx context.Context, opts PickOptions) ([]candidate, error) 
 		}
 	}
 	gitBin, gitErr := exec.LookPath("git")
-	zoxideBin, zoxideErr := exec.LookPath("zoxide")
-	if gitErr != nil || zoxideErr != nil {
+	if gitErr != nil {
 		return items, nil
 	}
 
@@ -162,13 +160,15 @@ func loadCandidates(ctx context.Context, opts PickOptions) ([]candidate, error) 
 		count++
 	}
 
-	out, err := exec.CommandContext(ctx, zoxideBin, "query", "-l").Output()
+	paths, err := sharedzoxide.List(ctx)
 	if err != nil {
 		return items, nil
 	}
-	scanner := bufio.NewScanner(bytes.NewReader(out))
-	for scanned := 0; scanner.Scan() && scanned < 500 && count < opts.Limit; scanned++ {
-		path, ok := physicalDir(scanner.Text())
+	for scanned, rawPath := range paths {
+		if scanned >= 500 || count >= opts.Limit {
+			break
+		}
+		path, ok := physicalDir(rawPath)
 		if !ok || seen[path] {
 			continue
 		}
@@ -189,9 +189,6 @@ func loadCandidates(ctx context.Context, opts PickOptions) ([]candidate, error) 
 			choice: Choice{Kind: kind, WorkspaceID: workspaceID, Path: path},
 		})
 		count++
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("read zoxide output: %w", err)
 	}
 	return items, nil
 }

@@ -1,15 +1,14 @@
 package app
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/clipboard"
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/herdr"
 )
 
@@ -32,15 +31,7 @@ func copyLast(ctx context.Context, c herdr.Client, includeCommand bool) error {
 	if err != nil {
 		return err
 	}
-	clipboard := envOr("HERDR_COPY_CLIPBOARD_BIN", "/usr/bin/pbcopy")
-	cmd := exec.CommandContext(ctx, clipboard)
-	cmd.Stdin = strings.NewReader(content)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("could not write to clipboard: %s", strings.TrimSpace(stderr.String()))
-	}
-	return nil
+	return clipboard.Copy(ctx, content)
 }
 
 func lastCommandOutput(scrollback string, includeCommand bool) (string, error) {

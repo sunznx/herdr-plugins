@@ -1,6 +1,6 @@
 id = "sunznx.herdr-new-codex"
 name = "Herdr New Codex"
-version = "0.1.6"
+version = "0.1.8"
 min_herdr_version = "0.8.0"
 description = "Choose a workspace and open a new Codex tab."
 platforms = ["macos"]

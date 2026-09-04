@@ -1,7 +1,10 @@
 # herdr-ai-rename
 
 Renames panes, tabs, and agents manually or uses Codex with
-`gpt-5.3-codex-spark` to generate a short task slug from recent terminal output.
+Codex to generate a short task slug from recent terminal output. It uses
+`gpt-5.3-codex-spark` by default and falls back to `gpt-5.4-mini` when the primary model
+reports an exhausted quota. Override them with `HERDR_AI_RENAME_MODEL` and
+`HERDR_AI_RENAME_FALLBACK_MODEL` when needed.
 
 Actions:
 

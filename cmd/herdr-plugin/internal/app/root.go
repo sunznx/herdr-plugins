@@ -45,6 +45,9 @@ func NewCommand() *cobra.Command {
 		group("rename",
 			leaf("ai-current", func(ctx context.Context) error { return aiRename(ctx, c, false) }),
 			leaf("ai-all", func(ctx context.Context) error { return aiRename(ctx, c, true) }),
+			argument("spawn [mode]", []string{"ai-current", "ai-all"}, cobra.ExactArgs(1), func(ctx context.Context, mode string) error {
+				return spawnAIRename(mode == "ai-all")
+			}),
 			argument("open [mode]", []string{"pane-agent", "tab", "agent"}, cobra.MaximumNArgs(1), func(ctx context.Context, mode string) error {
 				if mode == "" {
 					mode = "pane-agent"
@@ -61,19 +64,23 @@ func NewCommand() *cobra.Command {
 			leaf("close", func(ctx context.Context) error { return closeCodex(ctx, c) }),
 		),
 		group("yazi",
-			argument("open [mode]", []string{"pick", "fzf", "rg", "trellis"}, cobra.MaximumNArgs(1), func(ctx context.Context, mode string) error {
+			argument("open [mode]", []string{"pick", "fzf", "rg"}, cobra.MaximumNArgs(1), func(ctx context.Context, mode string) error {
 				if mode == "" {
 					mode = "pick"
 				}
 				return yaziOpen(ctx, c, mode)
 			}),
 			leaf("picker", func(ctx context.Context) error { return yaziPicker(ctx, c) }),
-			argument("browser [mode]", []string{"fzf", "rg", "trellis"}, cobra.MaximumNArgs(1), func(ctx context.Context, mode string) error {
+			argument("browser [mode]", []string{"fzf", "rg"}, cobra.MaximumNArgs(1), func(ctx context.Context, mode string) error {
 				if mode == "" {
 					mode = "fzf"
 				}
 				return yaziBrowser(ctx, mode)
 			}),
+		),
+		group("zoxide",
+			leaf("open", func(ctx context.Context) error { return zoxideOpen(ctx, c) }),
+			leaf("picker", func(ctx context.Context) error { return zoxidePicker(ctx, c) }),
 		),
 		group("palette",
 			leaf("open", func(ctx context.Context) error { return paletteOpen(ctx, c) }),

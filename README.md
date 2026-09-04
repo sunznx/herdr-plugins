@@ -6,7 +6,7 @@ Personal [Herdr](https://herdr.dev) plugins.
 
 | Plugin | Description |
 | --- | --- |
-| [yazi-popup](yazi-popup) | Provides Yazi popups for `@path` picking, fzf navigation, `fr.yazi` real-time content search, and reverse-sorted `.trellis` browsing. |
+| [yazi-popup](yazi-popup) | Provides Yazi popups for `@path` picking, fzf navigation, and `fr.yazi` real-time content search. |
 | [gitui-popup](gitui-popup) | Opens [GitUI](https://github.com/gitui-org/gitui) in an `80% × 80%` popup rooted at the triggering pane's directory. |
 | [command-palette-popup](command-palette-popup) | Searches Herdr native commands, live targets, and installed plugin actions from one fzf popup. |
 | [herdr-move](herdr-move) | Moves the triggering pane and its running agent into an existing workspace without reusing stale pane IDs. |
@@ -44,6 +44,6 @@ runtime dependency.
 
 ## Credits
 
-- `yazi-popup` originates from [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup) and is extended here with fzf navigation, `fr.yazi` real-time rg, and `.trellis` workflows.
+- `yazi-popup` originates from [alastairsounds/herdr-plugins](https://github.com/alastairsounds/herdr-plugins/tree/main/yazi-popup) and is extended here with fzf navigation and `fr.yazi` real-time rg workflows.
 - `command-palette-popup` combines ideas and code from [enekos/herdr-quick-actions](https://github.com/enekos/herdr-quick-actions) and [JanTvrdik/herdr-command-palette](https://github.com/JanTvrdik/herdr-command-palette). Their MIT notices are retained in the plugin's [LICENSE](command-palette-popup/LICENSE).
 - `gitui-popup`, `herdr-move`, `herdr-ai-rename`, `mole-current-dir`, and `open-in` reuse the Herdr context and pane-launching patterns demonstrated by `yazi-popup`; their task-specific behavior was added in this repository. `gitui-popup` runs [GitUI](https://github.com/gitui-org/gitui).

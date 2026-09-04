@@ -67,6 +67,23 @@ func newCodex(ctx context.Context, c herdr.Client) error {
 	return fmt.Errorf("Codex trust prompt did not appear within 10 seconds")
 }
 
+func waitAgent(ctx context.Context, c herdr.Client, paneID string, states ...string) (herdr.Pane, error) {
+	args := []string{"agent", "wait", paneID}
+	for _, state := range states {
+		args = append(args, "--until", state)
+	}
+	args = append(args, "--timeout", "10000")
+	var response struct {
+		Result struct {
+			Agent herdr.Pane `json:"agent"`
+		} `json:"result"`
+	}
+	if err := c.JSON(ctx, &response, args...); err != nil {
+		return herdr.Pane{}, err
+	}
+	return response.Result.Agent, nil
+}
+
 func closeCodex(ctx context.Context, c herdr.Client) error {
 	pane, err := herdr.OriginPane(ctx, c)
 	if err != nil {
@@ -86,42 +103,33 @@ func closeCodex(ctx context.Context, c herdr.Client) error {
 		if _, err := c.Run(ctx, "agent", "send-keys", pane.PaneID, "esc"); err != nil {
 			return err
 		}
-		stopped := false
-		for range 100 {
-			current, getErr := c.GetPane(ctx, pane.PaneID)
-			if getErr != nil || current.Agent != "codex" {
-				return closePane()
-			}
-			if current.AgentStatus == "idle" || current.AgentStatus == "done" {
-				stopped = true
-				break
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-		if !stopped {
+		current, err := waitAgent(ctx, c, pane.PaneID, "idle", "done", "unknown")
+		if err != nil {
 			return fmt.Errorf("Codex did not stop the current task within 10 seconds; pane left open")
+		}
+		if current.Agent != "codex" {
+			return closePane()
 		}
 	}
 	if _, err := c.Run(ctx, "agent", "prompt", pane.PaneID, "/archive"); err != nil {
 		return err
 	}
-	confirmed := false
-	for range 100 {
+	if _, err := c.Run(ctx, "pane", "wait-output", pane.PaneID, "--match", "Archive this session?", "--source", "visible", "--timeout", "10000"); err != nil {
 		current, getErr := c.GetPane(ctx, pane.PaneID)
 		if getErr != nil || current.Agent != "codex" {
 			return closePane()
 		}
-		recent, _ := c.Run(ctx, "pane", "read", pane.PaneID, "--source", "recent-unwrapped", "--lines", "60")
-		text := string(recent)
-		if !confirmed && (current.AgentStatus == "blocked" || strings.Contains(text, "Archive this session?")) {
-			if _, err := c.Run(ctx, "agent", "send-keys", pane.PaneID, "down", "enter"); err != nil {
-				return err
-			}
-			confirmed = true
-		} else if confirmed && strings.Contains(text, "Failed to archive current thread") {
-			return closePane()
-		}
-		time.Sleep(100 * time.Millisecond)
+		return fmt.Errorf("Codex did not ask to archive within 10 seconds; pane left open")
+	}
+	if _, err := c.Run(ctx, "agent", "send-keys", pane.PaneID, "down", "enter"); err != nil {
+		return err
+	}
+	if _, err := waitAgent(ctx, c, pane.PaneID, "unknown"); err == nil {
+		return closePane()
+	}
+	recent, _ := c.Run(ctx, "pane", "read", pane.PaneID, "--source", "recent-unwrapped", "--lines", "60")
+	if strings.Contains(string(recent), "Failed to archive current thread") {
+		return closePane()
 	}
 	return fmt.Errorf("Codex did not finish /archive within 10 seconds; pane left open")
 }
