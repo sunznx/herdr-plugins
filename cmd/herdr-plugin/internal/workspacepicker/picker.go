@@ -20,11 +20,13 @@ const (
 	Scratch   Kind = "scratch"
 	Workspace Kind = "workspace"
 	Directory Kind = "directory"
+	Named     Kind = "named"
 )
 
 type Choice struct {
 	Kind        Kind
 	WorkspaceID string
+	Label       string
 	Path        string
 }
 
@@ -35,6 +37,8 @@ type PickOptions struct {
 	Limit           int
 	Choice          string
 	CandidatesFile  string
+	CreateMissing   bool
+	CreateCWD       string
 }
 
 type candidate struct {
@@ -85,7 +89,7 @@ func Pick(ctx context.Context, opts PickOptions) (*Choice, error) {
 
 	token := opts.Choice
 	if token == "" {
-		token, err = pickWithFZF(ctx, rows, opts.Prompt)
+		token, err = pickWithFZF(ctx, rows, opts.Prompt, candidates)
 		if err != nil {
 			return nil, err
 		}
@@ -94,9 +98,18 @@ func Pick(ctx context.Context, opts PickOptions) (*Choice, error) {
 		}
 	}
 	for _, item := range candidates {
-		if item.token == token {
+		fields := strings.Split(item.row, "\t")
+		if item.token == token || (len(fields) > 2 && (fields[2] == token || (len(fields) > 3 && fields[3] == token))) {
 			choice := item.choice
 			return &choice, nil
+		}
+	}
+	if opts.CreateMissing && token != "" && opts.CreateCWD != "" && !strings.HasPrefix(token, "__") && !strings.HasPrefix(token, "/") {
+		return &Choice{Kind: Named, Label: token, Path: opts.CreateCWD}, nil
+	}
+	if opts.CreateMissing && filepath.IsAbs(token) {
+		if path, ok := physicalDir(token); ok {
+			return &Choice{Kind: Directory, Path: path}, nil
 		}
 	}
 	return nil, fmt.Errorf("selected workspace %q is unavailable", token)
@@ -124,20 +137,27 @@ func loadCandidates(ctx context.Context, opts PickOptions) ([]candidate, error) 
 			items[0].choice.WorkspaceID = workspace.WorkspaceID
 		}
 	}
+	for _, workspace := range workspaces.Result.Workspaces {
+		if workspace.Label == "scratch" {
+			continue
+		}
+		token := "__workspace__:" + workspace.WorkspaceID
+		items = append(items, candidate{
+			token:  token,
+			row:    strings.Join([]string{token, "[GOTO]", workspace.Label, ""}, "\t"),
+			choice: Choice{Kind: Workspace, WorkspaceID: workspace.WorkspaceID},
+		})
+	}
 	gitBin, gitErr := exec.LookPath("git")
 	if gitErr != nil {
 		return items, nil
 	}
 
-	rootWorkspace := make(map[string]string)
 	workspaceRoot := make(map[string]string)
 	for _, pane := range panes.Result.Panes {
-		root, ok := canonicalRoot(ctx, gitBin, pane.CWD)
+		root, ok := physicalDir(pane.CWD)
 		if !ok || pane.WorkspaceID == "" {
 			continue
-		}
-		if _, exists := rootWorkspace[root]; !exists {
-			rootWorkspace[root] = pane.WorkspaceID
 		}
 		if _, exists := workspaceRoot[pane.WorkspaceID]; !exists {
 			workspaceRoot[pane.WorkspaceID] = root
@@ -145,19 +165,20 @@ func loadCandidates(ctx context.Context, opts PickOptions) ([]candidate, error) 
 	}
 	seen := make(map[string]bool)
 	count := 0
-	if root := workspaceRoot[opts.KeepWorkspaceID]; root != "" && labels[opts.KeepWorkspaceID] != "scratch" {
-		label := labels[opts.KeepWorkspaceID]
-		if label == "" {
-			label = filepath.Base(root)
+	for i := range items {
+		if items[i].choice.Kind != Workspace {
+			continue
 		}
-		token := "__workspace__:" + opts.KeepWorkspaceID
-		items = append(items, candidate{
-			token:  token,
-			row:    strings.Join([]string{token, "[GOTO]", label, root}, "\t"),
-			choice: Choice{Kind: Workspace, WorkspaceID: opts.KeepWorkspaceID, Path: root},
-		})
-		seen[root] = true
-		count++
+		root := workspaceRoot[items[i].choice.WorkspaceID]
+		items[i].choice.Path = root
+		fields := strings.Split(items[i].row, "\t")
+		if len(fields) > 3 {
+			fields[3] = root
+			items[i].row = strings.Join(fields, "\t")
+		}
+		if root != "" {
+			seen[root] = true
+		}
 	}
 
 	paths, err := sharedzoxide.List(ctx)
@@ -176,21 +197,30 @@ func loadCandidates(ctx context.Context, opts PickOptions) ([]candidate, error) 
 			continue
 		}
 		seen[path] = true
-		workspaceID := rootWorkspace[path]
 		state := "[NEW]"
-		kind := Directory
-		if workspaceID != "" {
-			state = "[GOTO]"
-			kind = Workspace
-		}
 		items = append(items, candidate{
 			token:  path,
 			row:    strings.Join([]string{path, state, filepath.Base(path), path}, "\t"),
-			choice: Choice{Kind: kind, WorkspaceID: workspaceID, Path: path},
+			choice: Choice{Kind: Directory, Path: path},
 		})
 		count++
 	}
+	preferWorkspace(items, opts.KeepWorkspaceID)
 	return items, nil
+}
+
+func preferWorkspace(items []candidate, workspaceID string) {
+	if workspaceID == "" || len(items) < 2 || items[0].choice.WorkspaceID == workspaceID {
+		return
+	}
+	for i := 1; i < len(items); i++ {
+		if items[i].choice.Kind == Workspace && items[i].choice.WorkspaceID == workspaceID {
+			item := items[i]
+			copy(items[1:i+1], items[0:i])
+			items[0] = item
+			return
+		}
+	}
 }
 
 func canonicalRoot(ctx context.Context, gitBin, path string) (string, bool) {
@@ -257,17 +287,47 @@ func candidateRows(candidates []candidate) string {
 	return strings.Join(rows, "\n") + "\n"
 }
 
-func pickWithFZF(ctx context.Context, rows, prompt string) (string, error) {
-	selected, err := sharedfzf.Pick(ctx, rows,
-		"--delimiter=\t", "--with-nth=2..", "--prompt="+prompt,
-		"--header=[GOTO] switch · [NEW] create · [SCRATCH] temporary",
-		"--reverse", "--cycle", "--no-multi", "--tiebreak=begin,index",
-	)
+func pickWithFZF(ctx context.Context, rows, prompt string, candidates []candidate) (string, error) {
+	selected, err := sharedfzf.Pick(ctx, rows, workspaceFZFArgs(prompt)...)
 	if err != nil {
 		return "", err
 	}
 	if selected == "" {
 		return "", nil
 	}
-	return strings.SplitN(selected, "\t", 2)[0], nil
+	return resolveFZFSelection(selected, candidates), nil
+}
+
+func workspaceFZFArgs(prompt string) []string {
+	return []string{
+		"--delimiter=\t", "--with-nth=2..", "--prompt=" + prompt, "--print-query",
+		"--header=[GOTO] switch · [NEW] create · [SCRATCH] temporary",
+		"--reverse", "--cycle", "--no-multi", "--tiebreak=begin,index",
+	}
+}
+
+func parseFZFSelection(selected string) string {
+	lines := strings.Split(strings.TrimRight(selected, "\n"), "\n")
+	if len(lines) == 1 && strings.Contains(lines[0], "\t") {
+		return strings.SplitN(lines[0], "\t", 2)[0]
+	}
+	if len(lines) > 1 && strings.TrimSpace(lines[1]) != "" {
+		return strings.SplitN(lines[1], "\t", 2)[0]
+	}
+	return strings.TrimSpace(lines[0])
+}
+
+func resolveFZFSelection(selected string, candidates []candidate) string {
+	token := parseFZFSelection(selected)
+	lines := strings.Split(strings.TrimRight(selected, "\n"), "\n")
+	if len(lines) < 2 || !strings.HasPrefix(token, "__workspace__:") {
+		return token
+	}
+	query := strings.TrimSpace(lines[0])
+	for _, item := range candidates {
+		if item.choice.Kind == Directory && filepath.Base(item.choice.Path) == query {
+			return item.token
+		}
+	}
+	return token
 }

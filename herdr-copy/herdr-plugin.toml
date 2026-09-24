@@ -1,0 +1,62 @@
+id = "sunznx.herdr-copy"
+name = "Herdr Copy"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Copy directories, command output, zoxide paths, and manage current agent sessions."
+platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
+
+[[actions]]
+id = "copy-current-dir"
+title = "Copy current directory"
+contexts = ["pane"]
+command = ["./herdr-plugin", "copy", "current-dir"]
+
+[[actions]]
+id = "copy-current-agent-session"
+title = "Copy current agent session"
+contexts = ["pane"]
+command = ["./herdr-plugin", "copy", "current-agent-session"]
+
+[[actions]]
+id = "fork-current-agent-session-in-new-tab"
+title = "Fork current agent session in new tab"
+contexts = ["pane"]
+command = ["./herdr-plugin", "copy", "fork-current-agent-session-in-new-tab"]
+
+[[actions]]
+id = "resume-current-agent-session-in-new-tab"
+title = "Resume current agent session in new tab"
+contexts = ["pane"]
+command = ["./herdr-plugin", "copy", "resume-current-agent-session-in-new-tab"]
+
+[[panes]]
+id = "picker"
+title = "zoxide"
+placement = "popup"
+width = "70%"
+height = "70%"
+command = ["./herdr-plugin", "zoxide", "picker"]
+
+[[actions]]
+id = "copy-last-command-output"
+title = "Copy last command output"
+description = "Copy the previous command's output to the clipboard"
+contexts = ["pane"]
+command = ["./herdr-plugin", "copy", "output"]
+
+[[actions]]
+id = "copy-last-command-and-output"
+title = "Copy last command and output"
+description = "Copy the previous command and its output to the clipboard"
+contexts = ["pane"]
+command = ["./herdr-plugin", "copy", "command-and-output"]
+
+[[actions]]
+id = "copy-zoxide-directory"
+title = "Copy zoxide directory"
+description = "Search zoxide directories and copy the selected path"
+contexts = ["workspace"]
+command = ["./herdr-plugin", "copy", "zoxide-directory"]

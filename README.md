@@ -9,12 +9,14 @@ Personal [Herdr](https://herdr.dev) plugins.
 | [yazi-popup](yazi-popup) | Provides Yazi popups for `@path` picking, fzf navigation, and `fr.yazi` real-time content search. |
 | [gitui-popup](gitui-popup) | Opens [GitUI](https://github.com/gitui-org/gitui) in an `80% × 80%` popup rooted at the triggering pane's directory. |
 | [command-palette-popup](command-palette-popup) | Searches Herdr native commands, live targets, and installed plugin actions from one fzf popup. |
-| [herdr-move](herdr-move) | Moves the triggering pane and its running agent into an existing workspace without reusing stale pane IDs. |
+| [herdr-move](herdr-move) | Moves the triggering pane and its running agent into an existing workspace tab or the root tab of a newly created workspace. |
 | [herdr-ai-rename](herdr-ai-rename) | Renames panes, tabs, and agents manually or with Codex. |
-| [herdr-copy-last-command-output](herdr-copy-last-command-output) | Copies the most recent command output, with or without its command, to the macOS clipboard. |
+| [herdr-copy](herdr-copy) | Copies directories, agent sessions, command output, and zoxide paths. |
+| [herdr-duplicate](herdr-duplicate) | Creates a new tab and starts Codex when the current tab contains Codex. |
 | [mole-current-dir](mole-current-dir) | Opens a pane and runs `mole analyze .` in the triggering pane's directory. |
 | [open-in](open-in) | Opens the triggering pane's current directory in Emacs, IntelliJ IDEA, or Fork. |
-| [herdr-new-codex](herdr-new-codex) | Opens a new Codex tab in a workspace selected with fzf. |
+| [herdr-new-codex](herdr-new-codex) | Opens a new tab or Codex tab through the workspace picker, including when launched from the command palette. |
+| [herdr-agent-sidebar](herdr-agent-sidebar) | Installs a compact, task-first layout for the Herdr Agent sidebar. |
 
 ### yazi-popup
 
@@ -30,10 +32,12 @@ herdr plugin install sunznx/herdr-plugins/gitui-popup
 herdr plugin install sunznx/herdr-plugins/command-palette-popup
 herdr plugin install sunznx/herdr-plugins/herdr-move
 herdr plugin install sunznx/herdr-plugins/herdr-ai-rename
-herdr plugin install sunznx/herdr-plugins/herdr-copy-last-command-output
+herdr plugin install sunznx/herdr-plugins/herdr-copy
+herdr plugin install sunznx/herdr-plugins/herdr-duplicate
 herdr plugin install sunznx/herdr-plugins/mole-current-dir
 herdr plugin install sunznx/herdr-plugins/open-in
 herdr plugin install sunznx/herdr-plugins/herdr-new-codex
+herdr plugin install sunznx/herdr-plugins/herdr-agent-sidebar
 ```
 
 See each plugin's own README for setup details.

@@ -1,0 +1,16 @@
+id = "sunznx.herdr-duplicate"
+name = "Herdr Duplicate"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Duplicate the current tab and optionally start Codex or Claude."
+platforms = ["macos"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
+
+[[actions]]
+id = "duplicate-tab-or-agent"
+title = "Duplicate tab or agent"
+description = "Create a tab in the current workspace and start the current tab's Codex or Claude agent"
+contexts = ["workspace"]
+command = ["./herdr-plugin", "duplicate", "tab-or-agent"]

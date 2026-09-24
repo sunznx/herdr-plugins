@@ -10,9 +10,22 @@ command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugi
 
 [[actions]]
 id = "codex"
-title = "New Codex tab"
+title = "New Codex tab in workspace"
 contexts = ["workspace"]
 command = ["./herdr-plugin", "new-codex", "open"]
+
+[[actions]]
+id = "tab"
+title = "New tab in workspace"
+contexts = ["workspace"]
+command = ["./herdr-plugin", "new-codex", "open-tab"]
+
+[[actions]]
+id = "claude"
+title = "New Claude tab in workspace"
+description = "Choose a workspace and open a new Claude tab."
+contexts = ["workspace"]
+command = ["./herdr-plugin", "new-codex", "claude"]
 
 [[actions]]
 id = "herdr-close-codex"
@@ -22,8 +35,24 @@ command = ["./herdr-plugin", "new-codex", "close"]
 
 [[panes]]
 id = "picker"
-title = "New Codex tab"
+title = "New Codex tab in workspace"
 placement = "popup"
 width = 64
 height = 20
 command = ["./herdr-plugin", "new-codex", "picker"]
+
+[[panes]]
+id = "tab-picker"
+title = "New tab in workspace"
+placement = "popup"
+width = 64
+height = 20
+command = ["./herdr-plugin", "new-codex", "tab-picker"]
+
+[[panes]]
+id = "claude-picker"
+title = "New Claude tab in workspace"
+placement = "popup"
+width = 64
+height = 20
+command = ["./herdr-plugin", "new-codex", "claude-picker"]

@@ -35,6 +35,11 @@ func NewCommand() *cobra.Command {
 		group("copy",
 			leaf("output", func(ctx context.Context) error { return copyLast(ctx, c, false) }),
 			leaf("command-and-output", func(ctx context.Context) error { return copyLast(ctx, c, true) }),
+			leaf("current-dir", func(ctx context.Context) error { return copyCurrentDir(ctx, c) }),
+			leaf("current-agent-session", func(ctx context.Context) error { return copyCurrentAgentSession(ctx, c) }),
+			leaf("fork-current-agent-session-in-new-tab", func(ctx context.Context) error { return openCurrentAgentSession(ctx, c, true) }),
+			leaf("resume-current-agent-session-in-new-tab", func(ctx context.Context) error { return openCurrentAgentSession(ctx, c, false) }),
+			leaf("zoxide-directory", func(ctx context.Context) error { return zoxideOpen(ctx, c) }),
 		),
 		group("move",
 			leaf("open", func(ctx context.Context) error { return moveOpen(ctx, c, false) }),
@@ -58,10 +63,24 @@ func NewCommand() *cobra.Command {
 		),
 		group("new-codex",
 			leaf("open", func(ctx context.Context) error {
-				return c.OpenPane(ctx, envOr("HERDR_PLUGIN_ID", "sunznx.herdr-new-codex"), "picker", true, "")
+				return invokeNewCodexPickerDetached(c, "picker")
+			}),
+			leaf("open-tab", func(ctx context.Context) error {
+				return invokeNewCodexPickerDetached(c, "tab-picker")
+			}),
+			leaf("claude", func(ctx context.Context) error {
+				return invokeNewCodexPickerDetached(c, "claude-picker")
+			}),
+			argument("open-picker [entrypoint]", []string{"picker", "tab-picker", "claude-picker"}, cobra.ExactArgs(1), func(ctx context.Context, entrypoint string) error {
+				return openNewCodexPicker(ctx, c, entrypoint)
 			}),
 			leaf("picker", func(ctx context.Context) error { return newCodex(ctx, c) }),
+			leaf("tab-picker", func(ctx context.Context) error { return newPlainTab(ctx, c) }),
+			leaf("claude-picker", func(ctx context.Context) error { return newClaude(ctx, c) }),
 			leaf("close", func(ctx context.Context) error { return closeCodex(ctx, c) }),
+		),
+		group("duplicate",
+			leaf("tab-or-agent", func(ctx context.Context) error { return duplicateTabOrAgent(ctx, c) }),
 		),
 		group("yazi",
 			argument("open [mode]", []string{"pick", "fzf", "rg"}, cobra.MaximumNArgs(1), func(ctx context.Context, mode string) error {
@@ -78,13 +97,17 @@ func NewCommand() *cobra.Command {
 				return yaziBrowser(ctx, mode)
 			}),
 		),
-		group("zoxide",
-			leaf("open", func(ctx context.Context) error { return zoxideOpen(ctx, c) }),
-			leaf("picker", func(ctx context.Context) error { return zoxidePicker(ctx, c) }),
-		),
+		group("zoxide", leaf("picker", func(ctx context.Context) error { return zoxidePicker(ctx, c) })),
 		group("palette",
 			leaf("open", func(ctx context.Context) error { return paletteOpen(ctx, c) }),
 			leaf("run", func(ctx context.Context) error { return palette(ctx, c) }),
+		),
+		group("agent-sidebar",
+			leaf("configure", func(ctx context.Context) error { return agentSidebar(ctx, c, true, true) }),
+			leaf("unconfigure", func(ctx context.Context) error { return agentSidebar(ctx, c, false, true) }),
+			leaf("restart", func(context.Context) error { return invokeDetached(c, "agent-sidebar", "daemon") }),
+			leaf("self-test", func(context.Context) error { return agentSidebarSelfTest() }),
+			leaf("daemon", func(ctx context.Context) error { return agentSidebarDaemon(ctx, c) }),
 		),
 	)
 	return root

@@ -18,12 +18,13 @@ import (
 const aiRenameWorkerEnv = "HERDR_AI_RENAME_WORKER"
 
 const (
-	defaultAIRenameModel         = "gpt-5.3-codex-spark"
-	defaultAIRenameFallbackModel = "gpt-5.4-mini"
+	defaultAIRenameModel         = "gpt-5.5-codex-low"
+	defaultAIRenameFallbackModel = "gpt-5.5-codex-low"
 )
 
 type agentRow struct {
 	PaneID                string `json:"pane_id"`
+	TabID                 string `json:"tab_id"`
 	Agent                 string `json:"agent"`
 	AgentStatus           string `json:"agent_status"`
 	TerminalTitleStripped string `json:"terminal_title_stripped"`

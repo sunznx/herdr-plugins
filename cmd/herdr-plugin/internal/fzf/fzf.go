@@ -24,12 +24,26 @@ func Pick(ctx context.Context, rows string, args ...string) (string, error) {
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && (exitErr.ExitCode() == 1 || exitErr.ExitCode() == 130) {
-			return "", nil
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() == 1 && hasArg(args, "--print-query") {
+				return strings.TrimSpace(out.String()), nil
+			}
+			if exitErr.ExitCode() == 1 || exitErr.ExitCode() == 130 {
+				return "", nil
+			}
 		}
 		return "", fmt.Errorf("fzf: %w", err)
 	}
 	return strings.TrimSpace(out.String()), nil
+}
+
+func hasArg(args []string, want string) bool {
+	for _, arg := range args {
+		if arg == want {
+			return true
+		}
+	}
+	return false
 }
 
 func Run(ctx context.Context, command string, args ...string) error {

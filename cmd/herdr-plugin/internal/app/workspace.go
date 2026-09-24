@@ -10,7 +10,7 @@ import (
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/workspacepicker"
 )
 
-func pickWorkspace(ctx context.Context, c herdr.Client, prompt, keep, choiceEnv, candidatesEnv string) (*workspacepicker.Choice, error) {
+func pickWorkspace(ctx context.Context, c herdr.Client, prompt, keep, choiceEnv, candidatesEnv string, createMissing bool, createCWD string) (*workspacepicker.Choice, error) {
 	return workspacepicker.Pick(ctx, workspacepicker.PickOptions{
 		HerdrBin:        c.Bin,
 		Prompt:          prompt,
@@ -18,6 +18,8 @@ func pickWorkspace(ctx context.Context, c herdr.Client, prompt, keep, choiceEnv,
 		Limit:           100,
 		Choice:          os.Getenv(choiceEnv),
 		CandidatesFile:  os.Getenv(candidatesEnv),
+		CreateMissing:   createMissing,
+		CreateCWD:       createCWD,
 	})
 }
 
@@ -27,7 +29,9 @@ func createWorkspace(ctx context.Context, c herdr.Client, choice workspacepicker
 	}
 	cwd = choice.Path
 	args := []string{"workspace", "create"}
-	if choice.Kind == workspacepicker.Scratch {
+	if choice.Kind == workspacepicker.Named {
+		args = append(args, "--label", choice.Label)
+	} else if choice.Kind == workspacepicker.Scratch {
 		cwd, err = os.MkdirTemp("", "herdr-scratch-")
 		if err != nil {
 			return "", "", "", err

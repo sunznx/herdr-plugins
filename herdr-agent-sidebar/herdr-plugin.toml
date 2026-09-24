@@ -1,0 +1,31 @@
+id = "sunznx.herdr-agent-sidebar"
+name = "Herdr Agent Sidebar"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Use a compact, task-first layout for Herdr's Agent sidebar."
+platforms = ["linux", "macos", "windows"]
+
+[[build]]
+command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
+
+[[actions]]
+id = "configure"
+title = "Configure Agent sidebar"
+description = "Install the managed Agent sidebar layout and reload Herdr."
+command = ["./herdr-plugin", "agent-sidebar", "configure"]
+
+[[actions]]
+id = "unconfigure"
+title = "Restore Agent sidebar"
+description = "Remove this plugin's managed Agent sidebar layout and reload Herdr."
+command = ["./herdr-plugin", "agent-sidebar", "unconfigure"]
+
+[[actions]]
+id = "restart"
+title = "Restart Agent sidebar"
+description = "Replace the running Agent sidebar daemon after an update."
+contexts = ["global"]
+command = ["./herdr-plugin", "agent-sidebar", "restart"]
+
+[[startup]]
+command = ["./herdr-plugin", "agent-sidebar", "daemon"]

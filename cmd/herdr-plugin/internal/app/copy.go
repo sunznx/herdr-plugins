@@ -12,6 +12,125 @@ import (
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/herdr"
 )
 
+func copyCurrentDir(ctx context.Context, c herdr.Client) error {
+	pane, err := herdr.OriginPane(ctx, c)
+	if err != nil {
+		return err
+	}
+	cwd := herdr.PaneCWD(pane)
+	if cwd == "" {
+		return fmt.Errorf("current pane has no directory")
+	}
+	return clipboard.Copy(ctx, cwd)
+}
+
+func copyCurrentAgentSession(ctx context.Context, c herdr.Client) error {
+	pane, err := herdr.OriginPane(ctx, c)
+	if err != nil {
+		return err
+	}
+	if pane.AgentSession == nil || pane.AgentSession.Value == "" {
+		return fmt.Errorf("current pane has no agent session")
+	}
+	return clipboard.Copy(ctx, pane.AgentSession.Value)
+}
+
+func openCurrentAgentSession(ctx context.Context, c herdr.Client, fork bool) error {
+	pane, err := herdr.OriginPane(ctx, c)
+	if err != nil {
+		return err
+	}
+	return openAgentSession(ctx, c, pane, fork)
+}
+
+func openAgentSession(ctx context.Context, c herdr.Client, pane herdr.Pane, fork bool) error {
+	if pane.AgentSession == nil || pane.AgentSession.Agent == "" || pane.AgentSession.Value == "" {
+		return fmt.Errorf("current pane has no agent session")
+	}
+	argv, err := agentSessionArgv(*pane.AgentSession, fork)
+	if err != nil {
+		return err
+	}
+	create := []string{"tab", "create"}
+	if pane.WorkspaceID != "" {
+		create = append(create, "--workspace", pane.WorkspaceID)
+	}
+	if cwd := herdr.PaneCWD(pane); cwd != "" {
+		create = append(create, "--cwd", cwd)
+	}
+	create = append(create, "--focus")
+	out, err := c.Run(ctx, create...)
+	if err != nil {
+		return err
+	}
+	var response struct {
+		Result struct {
+			RootPane herdr.Pane `json:"root_pane"`
+		} `json:"result"`
+	}
+	if err := decode(out, &response); err != nil {
+		return err
+	}
+	if response.Result.RootPane.PaneID == "" {
+		return fmt.Errorf("Herdr did not return a root pane")
+	}
+	command := append([]string{"pane", "run", response.Result.RootPane.PaneID}, argv...)
+	_, err = c.Run(ctx, command...)
+	return err
+}
+
+func agentSessionArgv(session herdr.AgentSession, fork bool) ([]string, error) {
+	if session.Value == "" {
+		return nil, fmt.Errorf("agent session value is empty")
+	}
+	if fork {
+		switch {
+		case session.Source == "herdr:codex" && session.Agent == "codex" && session.Kind == "id":
+			return []string{"codex", "fork", session.Value}, nil
+		case session.Source == "herdr:claude" && session.Agent == "claude" && session.Kind == "id":
+			return []string{"claude", "--resume", session.Value, "--fork-session"}, nil
+		default:
+			return nil, fmt.Errorf("fork is unsupported for agent session %s/%s", session.Source, session.Agent)
+		}
+	}
+	switch {
+	case session.Source == "herdr:claude" && session.Agent == "claude" && session.Kind == "id":
+		return []string{"claude", "--resume", session.Value}, nil
+	case session.Source == "herdr:codex" && session.Agent == "codex" && session.Kind == "id":
+		return []string{"codex", "resume", session.Value}, nil
+	case session.Source == "herdr:copilot" && session.Agent == "copilot" && session.Kind == "id":
+		return []string{"copilot", "--resume=" + session.Value}, nil
+	case session.Source == "herdr:devin" && session.Agent == "devin" && session.Kind == "id":
+		return []string{"devin", "--resume", session.Value}, nil
+	case session.Source == "herdr:droid" && session.Agent == "droid" && session.Kind == "id":
+		return []string{"droid", "--resume", session.Value}, nil
+	case session.Source == "herdr:kimi" && session.Agent == "kimi" && session.Kind == "id":
+		return []string{"kimi", "--session", session.Value}, nil
+	case session.Source == "herdr:mastracode" && session.Agent == "mastracode" && session.Kind == "id":
+		return []string{"mastracode", "--thread", session.Value}, nil
+	case session.Source == "herdr:pi" && session.Agent == "pi" && (session.Kind == "id" || session.Kind == "path"):
+		return []string{"pi", "--session", session.Value}, nil
+	case session.Source == "herdr:omp" && session.Agent == "omp" && (session.Kind == "id" || session.Kind == "path"):
+		return []string{"omp", "--resume=" + session.Value}, nil
+	case session.Source == "herdr:hermes" && session.Agent == "hermes" && session.Kind == "id":
+		return []string{"hermes", "--resume", session.Value}, nil
+	case session.Source == "herdr:opencode" && session.Agent == "opencode" && session.Kind == "id":
+		return []string{"opencode", "--session", session.Value}, nil
+	case session.Source == "herdr:qodercli" && session.Agent == "qodercli" && session.Kind == "id":
+		return []string{"qodercli", "--resume", session.Value}, nil
+	case session.Source == "herdr:kilo" && session.Agent == "kilo" && session.Kind == "id":
+		return []string{"kilo", "--session", session.Value}, nil
+	case session.Source == "herdr:cursor" && session.Agent == "cursor" && session.Kind == "id":
+		return []string{"cursor-agent", "--resume", session.Value}, nil
+	case session.Source == "herdr:antigravity_cli" && session.Agent == "agy" && session.Kind == "id":
+		return []string{"agy", "--conversation", session.Value}, nil
+	case session.Source == "herdr:grok" && session.Agent == "grok" && session.Kind == "id":
+		return []string{"grok", "--resume", session.Value}, nil
+	default:
+		return nil, fmt.Errorf("resume is unsupported for agent session %s/%s", session.Source, session.Agent)
+	}
+}
+
 func copyLast(ctx context.Context, c herdr.Client, includeCommand bool) error {
 	paneID := herdr.PluginContext().FocusedPaneID
 	if paneID == "" {

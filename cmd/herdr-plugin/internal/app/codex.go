@@ -12,43 +12,9 @@ import (
 )
 
 func newCodex(ctx context.Context, c herdr.Client) error {
-	choice, err := pickWorkspace(ctx, c, "new Codex tab ▸ ", "", "HERDR_NEW_CODEX_CHOICE", "HERDR_NEW_CODEX_CANDIDATES_FILE")
-	if err != nil || choice == nil {
+	paneID, scratch, err := newTabInWorkspace(ctx, c, "new Codex tab ▸ ", "HERDR_NEW_CODEX_CHOICE", "HERDR_NEW_CODEX_CANDIDATES_FILE")
+	if err != nil || paneID == "" {
 		return err
-	}
-	scratch := choice.Kind == workspacepicker.Scratch
-	var out []byte
-	if scratch {
-		cwd, err := os.MkdirTemp("", "herdr-scratch-")
-		if err != nil {
-			return err
-		}
-		if choice.WorkspaceID == "" {
-			out, err = c.Run(ctx, "workspace", "create", "--label", "scratch", "--cwd", cwd, "--focus")
-		} else {
-			out, err = c.Run(ctx, "tab", "create", "--workspace", choice.WorkspaceID, "--cwd", cwd, "--focus")
-		}
-	} else if choice.Kind == workspacepicker.Workspace {
-		out, err = c.Run(ctx, "tab", "create", "--workspace", choice.WorkspaceID, "--cwd", choice.Path, "--focus")
-	} else if choice.Kind == workspacepicker.Directory {
-		out, err = c.Run(ctx, "workspace", "create", "--cwd", choice.Path, "--focus")
-	} else {
-		return fmt.Errorf("invalid workspace choice %q", choice.Kind)
-	}
-	if err != nil {
-		return err
-	}
-	var response struct {
-		Result struct {
-			RootPane herdr.Pane `json:"root_pane"`
-		} `json:"result"`
-	}
-	if err := decode(out, &response); err != nil {
-		return err
-	}
-	paneID := response.Result.RootPane.PaneID
-	if paneID == "" {
-		return fmt.Errorf("Herdr did not return a root pane")
 	}
 	if _, err := c.Run(ctx, "pane", "run", paneID, "exec codex"); err != nil {
 		return err
@@ -65,6 +31,95 @@ func newCodex(ctx context.Context, c herdr.Client) error {
 		time.Sleep(100 * time.Millisecond)
 	}
 	return fmt.Errorf("Codex trust prompt did not appear within 10 seconds")
+}
+
+func newPlainTab(ctx context.Context, c herdr.Client) error {
+	paneID, _, err := newTabInWorkspace(ctx, c, "new tab ▸ ", "HERDR_NEW_TAB_CHOICE", "HERDR_NEW_TAB_CANDIDATES_FILE")
+	if err != nil || paneID == "" {
+		return err
+	}
+	return nil
+}
+
+func newClaude(ctx context.Context, c herdr.Client) error {
+	paneID, _, err := newTabInWorkspace(ctx, c, "new Claude tab ▸ ", "HERDR_NEW_CLAUDE_CHOICE", "HERDR_NEW_CLAUDE_CANDIDATES_FILE")
+	if err != nil || paneID == "" {
+		return err
+	}
+	_, err = c.Run(ctx, "pane", "run", paneID, "exec claude")
+	return err
+}
+
+func openNewCodexPicker(ctx context.Context, c herdr.Client, entrypoint string) error {
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		err := c.OpenPane(ctx, "sunznx.herdr-new-codex", entrypoint, true, "")
+		if err == nil || !strings.Contains(err.Error(), `"code":"ui_busy"`) || time.Now().After(deadline) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+}
+
+func newTabInWorkspace(ctx context.Context, c herdr.Client, prompt, choiceEnv, candidatesEnv string) (string, bool, error) {
+	keepWorkspaceID := herdr.PluginContext().WorkspaceID
+	if keepWorkspaceID == "" && (os.Getenv("LIVE_PANE_ID") != "" || herdr.PluginContext().FocusedPaneID != "") {
+		if origin, originErr := herdr.OriginPane(ctx, c); originErr == nil {
+			keepWorkspaceID = origin.WorkspaceID
+		}
+	}
+	choice, err := pickWorkspace(ctx, c, prompt, keepWorkspaceID, choiceEnv, candidatesEnv, false, "")
+	if err != nil || choice == nil {
+		return "", false, err
+	}
+	scratch := choice.Kind == workspacepicker.Scratch
+	var out []byte
+	if scratch {
+		cwd, err := os.MkdirTemp("", "herdr-scratch-")
+		if err != nil {
+			return "", false, err
+		}
+		if choice.WorkspaceID == "" {
+			out, err = c.Run(ctx, "workspace", "create", "--label", "scratch", "--cwd", cwd, "--focus")
+		} else {
+			out, err = createTabInWorkspace(ctx, c, choice.WorkspaceID, cwd)
+		}
+	} else if choice.Kind == workspacepicker.Workspace {
+		out, err = createTabInWorkspace(ctx, c, choice.WorkspaceID, choice.Path)
+	} else if choice.Kind == workspacepicker.Directory {
+		out, err = c.Run(ctx, "workspace", "create", "--cwd", choice.Path, "--focus")
+	} else {
+		return "", false, fmt.Errorf("invalid workspace choice %q", choice.Kind)
+	}
+	if err != nil {
+		return "", false, err
+	}
+	var response struct {
+		Result struct {
+			RootPane herdr.Pane `json:"root_pane"`
+		} `json:"result"`
+	}
+	if err := decode(out, &response); err != nil {
+		return "", false, err
+	}
+	paneID := response.Result.RootPane.PaneID
+	if paneID == "" {
+		return "", false, fmt.Errorf("Herdr did not return a root pane")
+	}
+	return paneID, scratch, nil
+}
+
+func createTabInWorkspace(ctx context.Context, c herdr.Client, workspaceID, cwd string) ([]byte, error) {
+	args := []string{"tab", "create", "--workspace", workspaceID}
+	if cwd != "" {
+		args = append(args, "--cwd", cwd)
+	}
+	args = append(args, "--focus")
+	return c.Run(ctx, args...)
 }
 
 func waitAgent(ctx context.Context, c herdr.Client, paneID string, states ...string) (herdr.Pane, error) {

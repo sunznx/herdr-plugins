@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	sharedfzf "github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/fzf"
@@ -86,6 +88,7 @@ func paletteOpen(ctx context.Context, c herdr.Client) error {
 func palette(ctx context.Context, c herdr.Client) error {
 	pc := herdr.TargetContext{}
 	_ = json.Unmarshal([]byte(os.Getenv("CPP_CONTEXT_JSON")), &pc)
+	originPane := pc.Pane
 	popup := herdr.PluginContext()
 	pc = herdr.MergePopupContext(pc, popup)
 	popupPane := popup.FocusedPaneID
@@ -93,6 +96,7 @@ func palette(ctx context.Context, c herdr.Client) error {
 	if err != nil {
 		return err
 	}
+	state.OriginPane = originPane
 	rows := renderPalette(items)
 	if os.Getenv("CPP_LIST_ONLY") == "1" {
 		fmt.Print(rows)
@@ -128,6 +132,7 @@ type paletteState struct {
 	Tabs       []tabRow
 	Workspaces []workspaceRow
 	Agents     []agentRow
+	OriginPane string
 }
 
 func buildPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext) ([]paletteItem, paletteState, error) {
@@ -285,6 +290,26 @@ func dispatchPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext
 	}
 	if kind == "plugin" {
 		recordUsage(ctx, c, "plugin:"+payload)
+		if payload == "sunznx.herdr-new-codex.codex" || payload == "sunznx.herdr-new-codex.tab" || payload == "sunznx.herdr-new-codex.claude" {
+			entrypoint := "picker"
+			if payload == "sunznx.herdr-new-codex.tab" {
+				entrypoint = "tab-picker"
+			} else if payload == "sunznx.herdr-new-codex.claude" {
+				entrypoint = "claude-picker"
+			}
+			return invokeNewCodexPickerDetached(c, entrypoint)
+		}
+		if payload == "sunznx.herdr-copy.fork-current-agent-session-in-new-tab" || payload == "sunznx.herdr-copy.resume-current-agent-session-in-new-tab" {
+			paneID := state.OriginPane
+			if paneID == "" {
+				paneID = pc.Pane
+			}
+			pane, err := c.GetPane(ctx, paneID)
+			if err != nil {
+				return err
+			}
+			return openAgentSession(ctx, c, pane, strings.Contains(payload, ".fork-"))
+		}
 		return invokePlugin(ctx, c, payload)
 	}
 	if kind != "static" {
@@ -448,6 +473,39 @@ func dispatchPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext
 	return err
 }
 
+func invokeNewCodexPickerDetached(c herdr.Client, entrypoint string) error {
+	return invokeDetached(c, "new-codex", "open-picker", entrypoint)
+}
+
+func invokeDetached(c herdr.Client, args ...string) error {
+	if c.DryRun {
+		return nil
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(executable, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	cmd.Env = make([]string, 0, len(os.Environ()))
+	for _, value := range os.Environ() {
+		if (strings.HasPrefix(value, "HERDR_PLUGIN_") && !strings.HasPrefix(value, "HERDR_PLUGIN_STATE_DIR=")) || strings.HasPrefix(value, "HERDR_WORKSPACE_ID=") || strings.HasPrefix(value, "HERDR_TAB_ID=") || strings.HasPrefix(value, "HERDR_PANE_ID=") {
+			continue
+		}
+		cmd.Env = append(cmd.Env, value)
+	}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("could not start detached command: %w", err)
+	}
+	if err := cmd.Process.Release(); err != nil {
+		return fmt.Errorf("could not detach command: %w", err)
+	}
+	return nil
+}
+
 func paletteMoveWorkspace(ctx context.Context, c herdr.Client, popupPane string) error {
 	pane, err := livePopupPane(ctx, c, popupPane)
 	if err != nil {
@@ -456,24 +514,18 @@ func paletteMoveWorkspace(ctx context.Context, c herdr.Client, popupPane string)
 	if pane.PaneID == os.Getenv("HERDR_PANE_ID") {
 		return fmt.Errorf("refused to move the palette pane")
 	}
-	choice, err := pickWorkspace(ctx, c, "workspace ▸ ", pane.WorkspaceID, "CPP_PICK_VALUE", "CPP_WORKSPACE_CANDIDATES_FILE")
+	choice, err := pickWorkspace(ctx, c, "workspace ▸ ", pane.WorkspaceID, "CPP_PICK_VALUE", "CPP_WORKSPACE_CANDIDATES_FILE", true, herdr.PaneCWD(pane))
 	if err != nil || choice == nil {
 		return err
 	}
-	target, bootstrap, _, err := createWorkspace(ctx, c, *choice, false)
+	_, _, err = movePaneToWorkspace(ctx, c, pane, *choice)
 	if err != nil {
 		return err
 	}
-	if _, err = c.Run(ctx, "pane", "move", pane.PaneID, "--new-tab", "--workspace", target, "--focus"); err != nil {
-		return err
-	}
-	if bootstrap != "" {
-		_, err = c.Run(ctx, "pane", "close", bootstrap)
-	}
-	return err
+	return nil
 }
 func paletteNewWorkspace(ctx context.Context, c herdr.Client) error {
-	choice, err := pickWorkspace(ctx, c, "workspace ▸ ", "", "CPP_PICK_VALUE", "CPP_WORKSPACE_CANDIDATES_FILE")
+	choice, err := pickWorkspace(ctx, c, "workspace ▸ ", "", "CPP_PICK_VALUE", "CPP_WORKSPACE_CANDIDATES_FILE", false, "")
 	if err != nil || choice == nil {
 		return err
 	}

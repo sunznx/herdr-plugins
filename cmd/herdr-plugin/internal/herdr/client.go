@@ -15,15 +15,23 @@ type Client struct {
 }
 
 type Pane struct {
-	PaneID                string `json:"pane_id"`
-	TabID                 string `json:"tab_id"`
-	WorkspaceID           string `json:"workspace_id"`
-	CWD                   string `json:"cwd"`
-	ForegroundCWD         string `json:"foreground_cwd"`
-	Label                 string `json:"label"`
-	TerminalTitleStripped string `json:"terminal_title_stripped"`
-	Agent                 string `json:"agent"`
-	AgentStatus           string `json:"agent_status"`
+	PaneID                string        `json:"pane_id"`
+	TabID                 string        `json:"tab_id"`
+	WorkspaceID           string        `json:"workspace_id"`
+	CWD                   string        `json:"cwd"`
+	ForegroundCWD         string        `json:"foreground_cwd"`
+	Label                 string        `json:"label"`
+	TerminalTitleStripped string        `json:"terminal_title_stripped"`
+	Agent                 string        `json:"agent"`
+	AgentStatus           string        `json:"agent_status"`
+	AgentSession          *AgentSession `json:"agent_session"`
+}
+
+type AgentSession struct {
+	Source string `json:"source"`
+	Agent  string `json:"agent"`
+	Kind   string `json:"kind"`
+	Value  string `json:"value"`
 }
 
 type Context struct {

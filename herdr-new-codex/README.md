@@ -7,7 +7,11 @@
 ## Actions
 
 - `sunznx.herdr-new-codex.codex`：选择 workspace 并新建 Codex tab。
+- `sunznx.herdr-new-codex.tab`：选择 workspace 并新建普通 tab。
+- `sunznx.herdr-new-codex.claude`：选择 workspace 并新建 Claude tab。
 - `sunznx.herdr-new-codex.herdr-close-codex`：如果 Codex 正在执行任务，先按 `Esc` 中止；随后发送 `/archive`、确认归档，并在 Codex 退出后只关闭触发 action 的 pane，不影响同 tab 的其他 pane。
+
+从 `command-palette-popup` 选择 `New Codex tab in workspace` 或 `New tab in workspace` 时会打开对应的 picker popup；在 popup 中确认目录后才创建 tab。
 
 ## 安装
 
@@ -22,7 +26,7 @@ herdr plugin install sunznx/herdr-plugins/herdr-new-codex
 key = "prefix+c"
 type = "plugin_action"
 command = "sunznx.herdr-new-codex.codex"
-description = "New Codex tab"
+description = "New Codex tab in workspace"
 ```
 
 重新加载 Herdr 配置后，按 `prefix+c` 选择 workspace。

@@ -17,6 +17,8 @@ Native commands and plugin actions are ranked by usage frequency and recency. Pl
 
 The `open` action resolves the triggering pane before creating the popup. The popup is a session-modal terminal, not a movable Herdr pane, and its authoritative `HERDR_PLUGIN_CONTEXT_JSON` still identifies the tiled pane underneath it. Pane moves and renames therefore cannot target the command palette itself. Their nested selection or input happens inside the existing popup, so the palette never tries to open a second popup.
 
+Selecting `sunznx.herdr-new-codex.codex` is the exception: after the palette closes, it opens the `herdr-new-codex` picker pane directly in a detached session, so the picker is not tied to the palette's popup lifecycle.
+
 The palette replaces Herdr's native `Rename tab` and generic agent picker with
 the `sunznx.herdr-ai-rename.tab` and `sunznx.herdr-ai-rename.agent` actions. They run
 inline in the existing palette popup and target the tab or agent under it.

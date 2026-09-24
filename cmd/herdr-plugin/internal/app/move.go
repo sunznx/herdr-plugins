@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	sharedfzf "github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/fzf"
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/herdr"
+	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/workspacepicker"
 )
 
 func moveOpen(ctx context.Context, c herdr.Client, toTab bool) error {
@@ -36,46 +38,59 @@ func moveWorkspace(ctx context.Context, c herdr.Client) error {
 	if err != nil || pane.PaneID != paneID {
 		return fmt.Errorf("the source pane is no longer available")
 	}
-	choiceEnv := "HERDR_MOVE_CHOICE"
-	if selectedID := os.Getenv(choiceEnv); selectedID != "" && !strings.HasPrefix(selectedID, "__") && !strings.HasPrefix(selectedID, "/") {
-		var response struct {
-			Result struct {
-				Workspaces []workspaceRow `json:"workspaces"`
-			} `json:"result"`
-		}
-		if err := c.JSON(ctx, &response, "workspace", "list"); err != nil {
-			return err
-		}
-		for _, workspace := range response.Result.Workspaces {
-			if workspace.WorkspaceID == selectedID {
-				out, err := c.Run(ctx, "pane", "move", paneID, "--new-tab", "--workspace", selectedID, "--focus")
-				if err == nil {
-					fmt.Printf("Moved pane to %s (%s)\n", selectedID, movedPaneID(out))
-				}
-				return err
-			}
-		}
-		return fmt.Errorf("destination workspace %q is unavailable", selectedID)
-	}
-	choice, err := pickWorkspace(ctx, c, "move pane to workspace ▸ ", keep, choiceEnv, "HERDR_MOVE_CANDIDATES_FILE")
+	choice, err := pickWorkspace(ctx, c, "move pane to workspace ▸ ", keep, "HERDR_MOVE_CHOICE", "HERDR_MOVE_CANDIDATES_FILE", true, herdr.PaneCWD(pane))
 	if err != nil || choice == nil {
 		return err
 	}
-	target, bootstrap, _, err := createWorkspace(ctx, c, *choice, false)
+	target, out, err := movePaneToWorkspace(ctx, c, pane, *choice)
 	if err != nil {
 		return err
-	}
-	out, err := c.Run(ctx, "pane", "move", paneID, "--new-tab", "--workspace", target, "--focus")
-	if err != nil {
-		return err
-	}
-	if bootstrap != "" {
-		if _, err := c.Run(ctx, "pane", "close", bootstrap); err != nil {
-			return err
-		}
 	}
 	fmt.Printf("Moved pane to %s (%s)\n", target, movedPaneID(out))
 	return nil
+}
+
+func movePaneToWorkspace(ctx context.Context, c herdr.Client, pane herdr.Pane, choice workspacepicker.Choice) (string, []byte, error) {
+	target, bootstrap, cwd, err := createWorkspace(ctx, c, choice, false)
+	if err != nil {
+		return "", nil, err
+	}
+	sourceCWD := herdr.PaneCWD(pane)
+	out, err := c.Run(ctx, paneMoveArgs(pane.PaneID, target, bootstrap)...)
+	if err != nil {
+		return "", nil, err
+	}
+	if workspacePathChanged(sourceCWD, cwd) {
+		movedID := movedPaneID(out)
+		if movedID == "" {
+			return "", nil, fmt.Errorf("Herdr did not return the moved pane ID for directory change")
+		}
+		var command []string
+		if pane.Agent == "codex" {
+			command = []string{"agent", "prompt", movedID, "/cd " + cwd}
+		} else {
+			command = []string{"pane", "run", movedID, "cd " + cwd}
+		}
+		if _, err := c.Run(ctx, command...); err != nil {
+			return "", nil, err
+		}
+	}
+	return target, out, nil
+}
+
+func paneMoveArgs(paneID, workspaceID, bootstrapPaneID string) []string {
+	args := []string{"pane", "move", paneID}
+	if bootstrapPaneID == "" {
+		args = append(args, "--new-tab")
+	}
+	return append(args, "--workspace", workspaceID, "--focus")
+}
+
+func workspacePathChanged(source, target string) bool {
+	if source == "" || target == "" {
+		return false
+	}
+	return filepath.Clean(source) != filepath.Clean(target)
 }
 
 type workspaceRow struct {
