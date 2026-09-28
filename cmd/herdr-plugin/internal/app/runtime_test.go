@@ -79,7 +79,7 @@ func herdrTestHelper(args []string) {
 	case command == "--default-config":
 		fmt.Println("[keys]\n# prefix = \"ctrl+b\"\n# new_tab = \"prefix+c\"")
 	case command == "plugin action list":
-		fmt.Println(`{"result":{"actions":[{"plugin_id":"sunznx.herdr-move","action_id":"open","title":"Move pane to workspace"},{"plugin_id":"sunznx.herdr-new-codex","action_id":"codex","title":"New Codex tab in workspace"},{"plugin_id":"sunznx.herdr-new-codex","action_id":"tab","title":"New tab in workspace"}]}}`)
+		fmt.Println(`{"result":{"actions":[{"plugin_id":"sunznx.herdr-move","action_id":"open","title":"Move pane to workspace"},{"plugin_id":"sunznx.herdr-new","action_id":"codex","title":"New Codex tab in workspace"},{"plugin_id":"sunznx.herdr-new","action_id":"tab","title":"New tab in workspace"}]}}`)
 	case command == "pane list":
 		fmt.Printf("{\"result\":{\"panes\":[{\"workspace_id\":\"w1\",\"cwd\":%q}]}}\n", os.Getenv("HERDR_TEST_REPO"))
 	case command == "pane get w1:p0":
@@ -94,13 +94,13 @@ func herdrTestHelper(args []string) {
 		fmt.Println(`{"result":{"root_pane":{"pane_id":"w1:p2"}}}`)
 	case command == "pane run w1:p2 exec codex":
 		fmt.Println(`{"result":{}}`)
-	case command == "plugin action invoke sunznx.herdr-new-codex.codex":
-		fmt.Println(`{"result":{"log":{"log_id":"test-codex-log","plugin_id":"sunznx.herdr-new-codex"}}}`)
-	case command == "plugin log list --plugin sunznx.herdr-new-codex --limit 20":
+	case command == "plugin action invoke sunznx.herdr-new.codex":
+		fmt.Println(`{"result":{"log":{"log_id":"test-codex-log","plugin_id":"sunznx.herdr-new"}}}`)
+	case command == "plugin log list --plugin sunznx.herdr-new --limit 20":
 		fmt.Println(`{"result":{"logs":[{"log_id":"test-codex-log","status":"succeeded"}]}}`)
-	case os.Getenv("HERDR_TEST_POPUP_BUSY") == "1" && strings.HasPrefix(command, "plugin pane open --plugin sunznx.herdr-new-codex "):
+	case os.Getenv("HERDR_TEST_POPUP_BUSY") == "1" && strings.HasPrefix(command, "plugin pane open --plugin sunznx.herdr-new "):
 		data, _ := os.ReadFile(os.Getenv("HERDR_GO_TEST_CALLS"))
-		if strings.Count(string(data), "plugin pane open --plugin sunznx.herdr-new-codex ") <= 2 {
+		if strings.Count(string(data), "plugin pane open --plugin sunznx.herdr-new ") <= 2 {
 			fmt.Fprint(os.Stderr, `{"error":{"code":"ui_busy","message":"a popup pane is already open"}}`)
 			os.Exit(1)
 		}
@@ -172,7 +172,7 @@ func TestNewCodexPickerWaitsForPopupToClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Count(string(data), "plugin pane open --plugin sunznx.herdr-new-codex --entrypoint claude-picker --placement popup --focus"); got != 3 {
+	if got := strings.Count(string(data), "plugin pane open --plugin sunznx.herdr-new --entrypoint claude-picker --placement popup --focus"); got != 3 {
 		t.Fatalf("picker open attempts = %d, want 3; calls: %s", got, data)
 	}
 }
@@ -365,7 +365,7 @@ func TestPaletteUsesSharedRuntimeRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	rows := renderPalette(items)
-	for _, want := range []string{"static\tnew_workspace\t", "static\tmove_pane_workspace\t", "plugin\tsunznx.herdr-new-codex.codex\t"} {
+	for _, want := range []string{"static\tnew_workspace\t", "static\tmove_pane_workspace\t", "plugin\tsunznx.herdr-new.codex\t"} {
 		if !strings.Contains(rows, want) {
 			t.Fatalf("missing %q in palette rows:\n%s", want, rows)
 		}
@@ -394,7 +394,7 @@ func TestPaletteOpensNewCodexPickerDetached(t *testing.T) {
 	asyncCall := filepath.Join(t.TempDir(), "async-call")
 	t.Setenv("HERDR_GO_TEST_ASYNC_CALL", asyncCall)
 	t.Setenv("HERDR_GO_TEST_RECORD_CONTEXT", "1")
-	if err := dispatchPalette(context.Background(), herdr.New(), herdr.TargetContext{}, "", "plugin", "sunznx.herdr-new-codex.codex", paletteState{}); err != nil {
+	if err := dispatchPalette(context.Background(), herdr.New(), herdr.TargetContext{}, "", "plugin", "sunznx.herdr-new.codex", paletteState{}); err != nil {
 		t.Fatal(err)
 	}
 	var data []byte
@@ -433,7 +433,7 @@ func TestAllManifestsBuildAndRunGoRuntime(t *testing.T) {
 		"gitui-popup":           {`["./herdr-plugin", "gitui", "open"]`},
 		"herdr-ai-rename":       {`["./herdr-plugin", "rename", "ai-current"]`, `["./herdr-plugin", "rename", "picker"]`},
 		"herdr-move":            {`["./herdr-plugin", "move", "open"]`, `["./herdr-plugin", "move", "workspace"]`, `["./herdr-plugin", "move", "tab"]`},
-		"herdr-new-codex":       {`["./herdr-plugin", "new-codex", "open"]`, `["./herdr-plugin", "new-codex", "open-tab"]`, `["./herdr-plugin", "new-codex", "claude"]`, `["./herdr-plugin", "new-codex", "picker"]`, `["./herdr-plugin", "new-codex", "tab-picker"]`, `["./herdr-plugin", "new-codex", "claude-picker"]`, `["./herdr-plugin", "new-codex", "close"]`},
+		"herdr-new":             {`["./herdr-plugin", "new-codex", "open"]`, `["./herdr-plugin", "new-codex", "open-tab"]`, `["./herdr-plugin", "new-codex", "claude"]`, `["./herdr-plugin", "new-codex", "picker"]`, `["./herdr-plugin", "new-codex", "tab-picker"]`, `["./herdr-plugin", "new-codex", "claude-picker"]`, `["./herdr-plugin", "new-codex", "close"]`},
 		"herdr-duplicate":       {`["./herdr-plugin", "duplicate", "tab-or-agent"]`},
 		"herdr-copy":            {`["./herdr-plugin", "copy", "current-dir"]`, `["./herdr-plugin", "copy", "current-agent-session"]`, `["./herdr-plugin", "copy", "fork-current-agent-session-in-new-tab"]`, `["./herdr-plugin", "copy", "resume-current-agent-session-in-new-tab"]`, `["./herdr-plugin", "copy", "output"]`, `["./herdr-plugin", "copy", "command-and-output"]`, `["./herdr-plugin", "copy", "zoxide-directory"]`, `["./herdr-plugin", "zoxide", "picker"]`},
 		"mole-current-dir":      {`["./herdr-plugin", "mole", "open"]`},

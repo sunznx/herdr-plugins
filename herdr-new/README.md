@@ -1,4 +1,4 @@
-# herdr-new-codex
+# herdr-new
 
 通过 fzf 从最近访问的 zoxide 历史中选择目录：保留 Git 根目录和非 Git 目录，排除 Git 仓库内部的子目录。已有对应 workspace 时在其中新建 tab，否则创建 workspace。列表提供最多 100 个目录供模糊搜索，`scratch` 固定在第一项。
 
@@ -6,17 +6,17 @@
 
 ## Actions
 
-- `sunznx.herdr-new-codex.codex`：选择 workspace 并新建 Codex tab。
-- `sunznx.herdr-new-codex.tab`：选择 workspace 并新建普通 tab。
-- `sunznx.herdr-new-codex.claude`：选择 workspace 并新建 Claude tab。
-- `sunznx.herdr-new-codex.herdr-close-codex`：如果 Codex 正在执行任务，先按 `Esc` 中止；随后发送 `/archive`、确认归档，并在 Codex 退出后只关闭触发 action 的 pane，不影响同 tab 的其他 pane。
+- `sunznx.herdr-new.codex`：选择 workspace 并新建 Codex tab。
+- `sunznx.herdr-new.tab`：选择 workspace 并新建普通 tab。
+- `sunznx.herdr-new.claude`：选择 workspace 并新建 Claude tab。
+- `sunznx.herdr-new.herdr-close-codex`：如果 Codex 正在执行任务，先按 `Esc` 中止；随后发送 `/archive`、确认归档，并在 Codex 退出后只关闭触发 action 的 pane，不影响同 tab 的其他 pane。
 
 从 `command-palette-popup` 选择 `New Codex tab in workspace` 或 `New tab in workspace` 时会打开对应的 picker popup；在 popup 中确认目录后才创建 tab。
 
 ## 安装
 
 ```bash
-herdr plugin install sunznx/herdr-plugins/herdr-new-codex
+herdr plugin install sunznx/herdr-plugins/herdr-new
 ```
 
 在 `~/.config/herdr/config.toml` 中绑定 `prefix+c`：
@@ -25,7 +25,7 @@ herdr plugin install sunznx/herdr-plugins/herdr-new-codex
 [[keys.command]]
 key = "prefix+c"
 type = "plugin_action"
-command = "sunznx.herdr-new-codex.codex"
+command = "sunznx.herdr-new.codex"
 description = "New Codex tab in workspace"
 ```
 

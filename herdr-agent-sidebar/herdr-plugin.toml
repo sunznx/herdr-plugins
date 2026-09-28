@@ -5,27 +5,31 @@ min_herdr_version = "0.9.0"
 description = "Use a compact, task-first layout for Herdr's Agent sidebar."
 platforms = ["linux", "macos", "windows"]
 
-[[build]]
-command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
-
 [[actions]]
 id = "configure"
 title = "Configure Agent sidebar"
 description = "Install the managed Agent sidebar layout and reload Herdr."
-command = ["./herdr-plugin", "agent-sidebar", "configure"]
+command = ["go", "run", "../cmd/herdr-plugin", "agent-sidebar", "configure"]
 
 [[actions]]
 id = "unconfigure"
 title = "Restore Agent sidebar"
 description = "Remove this plugin's managed Agent sidebar layout and reload Herdr."
-command = ["./herdr-plugin", "agent-sidebar", "unconfigure"]
+command = ["go", "run", "../cmd/herdr-plugin", "agent-sidebar", "unconfigure"]
 
 [[actions]]
 id = "restart"
 title = "Restart Agent sidebar"
 description = "Replace the running Agent sidebar daemon after an update."
 contexts = ["global"]
-command = ["./herdr-plugin", "agent-sidebar", "restart"]
+command = ["go", "run", "../cmd/herdr-plugin", "agent-sidebar", "restart"]
+
+[[actions]]
+id = "hide-machine-name"
+title = "Hide this machine name in Agent sidebar"
+description = "Show only workspace labels on this server; other servers keep their machine suffix."
+contexts = ["global"]
+command = ["go", "run", "../cmd/herdr-plugin", "agent-sidebar", "hide-machine-name"]
 
 [[startup]]
-command = ["./herdr-plugin", "agent-sidebar", "daemon"]
+command = ["go", "run", "../cmd/herdr-plugin", "agent-sidebar", "daemon"]

@@ -290,11 +290,11 @@ func dispatchPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext
 	}
 	if kind == "plugin" {
 		recordUsage(ctx, c, "plugin:"+payload)
-		if payload == "sunznx.herdr-new-codex.codex" || payload == "sunznx.herdr-new-codex.tab" || payload == "sunznx.herdr-new-codex.claude" {
+		if payload == "sunznx.herdr-new.codex" || payload == "sunznx.herdr-new.tab" || payload == "sunznx.herdr-new.claude" {
 			entrypoint := "picker"
-			if payload == "sunznx.herdr-new-codex.tab" {
+			if payload == "sunznx.herdr-new.tab" {
 				entrypoint = "tab-picker"
-			} else if payload == "sunznx.herdr-new-codex.claude" {
+			} else if payload == "sunznx.herdr-new.claude" {
 				entrypoint = "claude-picker"
 			}
 			return invokeNewCodexPickerDetached(c, entrypoint)

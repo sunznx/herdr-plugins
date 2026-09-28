@@ -115,7 +115,7 @@ func agentSidebarDaemon(ctx context.Context, c herdr.Client) error {
 					lastActivityWrite = now
 				}
 			}
-			labels := agentSidebarWorkspaceLabels(ctx, c)
+			labels := agentSidebarWorkspaceLabels(ctx, c, agentSidebarMachineName())
 			layouts := agentSidebarLayouts(response.Result.Agents, activity, labels)
 			current := make(map[string]string, len(response.Result.Agents))
 			for _, agent := range response.Result.Agents {
@@ -235,7 +235,30 @@ func agentSidebarActivityPath() (string, error) {
 	return filepath.Join(root, "herdr", "plugins", "sunznx.herdr-agent-sidebar", "activity.json"), nil
 }
 
-func agentSidebarWorkspaceLabels(ctx context.Context, c herdr.Client) map[string]string {
+func agentSidebarMachineName() string {
+	activity, err := agentSidebarActivityPath()
+	if err == nil {
+		if _, err := os.Stat(filepath.Join(filepath.Dir(activity), "hide-machine-name")); err == nil {
+			return ""
+		}
+	}
+	hostname, _ := os.Hostname()
+	return hostname
+}
+
+func hideAgentSidebarMachineName() error {
+	activity, err := agentSidebarActivityPath()
+	if err != nil {
+		return err
+	}
+	marker := filepath.Join(filepath.Dir(activity), "hide-machine-name")
+	if err := os.MkdirAll(filepath.Dir(marker), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(marker, nil, 0o600)
+}
+
+func agentSidebarWorkspaceLabels(ctx context.Context, c herdr.Client, hostname string) map[string]string {
 	var response struct {
 		Result struct {
 			Workspaces []sidebarWorkspace `json:"workspaces"`
@@ -247,7 +270,14 @@ func agentSidebarWorkspaceLabels(ctx context.Context, c herdr.Client) map[string
 	labels := make(map[string]string, len(response.Result.Workspaces))
 	for _, workspace := range response.Result.Workspaces {
 		if workspace.WorkspaceID != "" {
-			labels[workspace.WorkspaceID] = workspace.Label
+			label := workspace.Label
+			if label == "" {
+				label = workspace.WorkspaceID
+			}
+			if hostname != "" && !strings.HasSuffix(label, " ("+hostname+")") {
+				label += " (" + hostname + ")"
+			}
+			labels[workspace.WorkspaceID] = label
 		}
 	}
 	return labels

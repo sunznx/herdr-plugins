@@ -11,4 +11,5 @@
 /*/herdr-plugin
 !/cmd/herdr-plugin/
 /command-palette-popup/workspace-picker
-/herdr-new-codex/workspace-picker
+/*/workspace-picker
+/agents.override.md

@@ -53,7 +53,7 @@ func newClaude(ctx context.Context, c herdr.Client) error {
 func openNewCodexPicker(ctx context.Context, c herdr.Client, entrypoint string) error {
 	deadline := time.Now().Add(5 * time.Second)
 	for {
-		err := c.OpenPane(ctx, "sunznx.herdr-new-codex", entrypoint, true, "")
+		err := c.OpenPane(ctx, "sunznx.herdr-new", entrypoint, true, "")
 		if err == nil || !strings.Contains(err.Error(), `"code":"ui_busy"`) || time.Now().After(deadline) {
 			return err
 		}

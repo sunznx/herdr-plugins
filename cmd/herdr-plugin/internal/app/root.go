@@ -105,6 +105,7 @@ func NewCommand() *cobra.Command {
 		group("agent-sidebar",
 			leaf("configure", func(ctx context.Context) error { return agentSidebar(ctx, c, true, true) }),
 			leaf("unconfigure", func(ctx context.Context) error { return agentSidebar(ctx, c, false, true) }),
+			leaf("hide-machine-name", func(context.Context) error { return hideAgentSidebarMachineName() }),
 			leaf("restart", func(context.Context) error { return invokeDetached(c, "agent-sidebar", "daemon") }),
 			leaf("self-test", func(context.Context) error { return agentSidebarSelfTest() }),
 			leaf("daemon", func(ctx context.Context) error { return agentSidebarDaemon(ctx, c) }),

@@ -1,8 +1,8 @@
-id = "sunznx.herdr-new-codex"
-name = "Herdr New Codex"
+id = "sunznx.herdr-new"
+name = "Herdr New"
 version = "0.1.8"
 min_herdr_version = "0.8.0"
-description = "Choose a workspace and open a new Codex tab."
+description = "Choose a workspace and open a new tab, Codex tab, or Claude tab."
 platforms = ["macos"]
 
 [[build]]

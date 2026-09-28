@@ -15,7 +15,7 @@ Personal [Herdr](https://herdr.dev) plugins.
 | [herdr-duplicate](herdr-duplicate) | Creates a new tab and starts Codex when the current tab contains Codex. |
 | [mole-current-dir](mole-current-dir) | Opens a pane and runs `mole analyze .` in the triggering pane's directory. |
 | [open-in](open-in) | Opens the triggering pane's current directory in Emacs, IntelliJ IDEA, or Fork. |
-| [herdr-new-codex](herdr-new-codex) | Opens a new tab or Codex tab through the workspace picker, including when launched from the command palette. |
+| [herdr-new](herdr-new) | Opens a new tab, Codex tab, or Claude tab through the workspace picker, including from the command palette. |
 | [herdr-agent-sidebar](herdr-agent-sidebar) | Installs a compact, task-first layout for the Herdr Agent sidebar. |
 
 ### yazi-popup
@@ -36,15 +36,15 @@ herdr plugin install sunznx/herdr-plugins/herdr-copy
 herdr plugin install sunznx/herdr-plugins/herdr-duplicate
 herdr plugin install sunznx/herdr-plugins/mole-current-dir
 herdr plugin install sunznx/herdr-plugins/open-in
-herdr plugin install sunznx/herdr-plugins/herdr-new-codex
+herdr plugin install sunznx/herdr-plugins/herdr-new
 herdr plugin install sunznx/herdr-plugins/herdr-agent-sidebar
 ```
 
 See each plugin's own README for setup details.
 
-All plugins are built from the shared Go runtime in this repository. Installation
-or local linking requires Go 1.24+; the resulting plugin binary has no Go or shell
-runtime dependency.
+All plugins use the shared Go runtime in this repository. Installation or local
+linking requires Go 1.24+. Most plugins run a built binary; `herdr-agent-sidebar`
+runs the shared source via `go run` so synced machines use their own architecture.
 
 ## Credits
 
