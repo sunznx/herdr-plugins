@@ -92,7 +92,7 @@ func herdrTestHelper(args []string) {
 		fmt.Println(`{"result":{"root_pane":{"pane_id":"w1:p2"}}}`)
 	case command == "tab create --workspace w1 --focus":
 		fmt.Println(`{"result":{"root_pane":{"pane_id":"w1:p2"}}}`)
-	case command == "pane run w1:p2 exec codex":
+	case command == "pane run w1:p2 exec codex", command == "pane run w1:p2 exec claude", command == "pane run w1:p2 exec doubao", command == "pane run w1:p2 exec gemini", command == "pane run w1:p2 exec opencode":
 		fmt.Println(`{"result":{}}`)
 	case command == "plugin action invoke sunznx.herdr-new.codex":
 		fmt.Println(`{"result":{"log":{"log_id":"test-codex-log","plugin_id":"sunznx.herdr-new"}}}`)
@@ -131,16 +131,14 @@ func herdrTestHelper(args []string) {
 	}
 }
 
-func TestNewCodexActionsDetachPicker(t *testing.T) {
-	for _, tc := range []struct{ action, entrypoint string }{
-		{"open", "picker"}, {"open-tab", "tab-picker"}, {"claude", "claude-picker"},
-	} {
-		t.Run(tc.action, func(t *testing.T) {
+func TestNewTabActionsDetachPicker(t *testing.T) {
+	for _, kind := range []string{"tab", "codex", "claude", "agent"} {
+		t.Run(kind, func(t *testing.T) {
 			call := filepath.Join(t.TempDir(), "call")
 			t.Setenv("HERDR_GO_TEST_ASYNC_CALL", call)
 			t.Setenv("CPP_DRY_RUN", "0")
 			root := NewCommand()
-			root.SetArgs([]string{"new-codex", tc.action})
+			root.SetArgs([]string{"new", "open", kind})
 			if err := root.Execute(); err != nil {
 				t.Fatal(err)
 			}
@@ -152,20 +150,20 @@ func TestNewCodexActionsDetachPicker(t *testing.T) {
 				}
 				time.Sleep(10 * time.Millisecond)
 			}
-			if got, want := strings.TrimSpace(string(data)), "new-codex open-picker "+tc.entrypoint; got != want {
+			if got, want := strings.TrimSpace(string(data)), "new popup "+kind; got != want {
 				t.Fatalf("detached picker = %q, want %q", got, want)
 			}
 		})
 	}
 }
 
-func TestNewCodexPickerWaitsForPopupToClose(t *testing.T) {
+func TestNewTabPickerWaitsForPopupToClose(t *testing.T) {
 	t.Setenv("HERDR_GO_TEST_HELPER", "1")
 	t.Setenv("HERDR_TEST_POPUP_BUSY", "1")
 	calls := filepath.Join(t.TempDir(), "calls")
 	t.Setenv("HERDR_GO_TEST_CALLS", calls)
 	c := herdr.Client{Bin: os.Args[0]}
-	if err := openNewCodexPicker(context.Background(), c, "claude-picker"); err != nil {
+	if err := openNewTabPicker(context.Background(), c, "claude"); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(calls)
@@ -291,6 +289,52 @@ func TestNewPlainTabDoesNotStartCodex(t *testing.T) {
 	}
 }
 
+func TestNewAgentTabStartsSelectedAgent(t *testing.T) {
+	t.Setenv("HERDR_GO_TEST_HELPER", "1")
+	t.Setenv("HERDR_BIN_PATH", os.Args[0])
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "claude"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	cwd := t.TempDir()
+	realCWD, err := filepath.EvalSymlinks(cwd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HERDR_TEST_REPO", cwd)
+	t.Setenv("HERDR_NEW_AGENT_KIND", "claude")
+	t.Setenv("HERDR_NEW_AGENT_CHOICE", "__workspace__:w1")
+	calls := filepath.Join(t.TempDir(), "calls")
+	t.Setenv("HERDR_GO_TEST_CALLS", calls)
+	if err := newAgentTab(context.Background(), herdr.New()); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "completion zsh\npane list\nworkspace list\ntab create --workspace w1 --cwd " + realCWD + " --focus\npane run w1:p2 exec claude\n"
+	if string(data) != want {
+		t.Fatalf("unexpected Herdr calls:\n%s\nwant:\n%s", data, want)
+	}
+}
+
+func TestNewAgentTabRejectsUninstalledAgent(t *testing.T) {
+	t.Setenv("HERDR_GO_TEST_HELPER", "1")
+	t.Setenv("HERDR_BIN_PATH", os.Args[0])
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("HERDR_NEW_AGENT_KIND", "claude")
+	calls := filepath.Join(t.TempDir(), "calls")
+	t.Setenv("HERDR_GO_TEST_CALLS", calls)
+	if err := newAgentTab(context.Background(), herdr.New()); err == nil {
+		t.Fatal("expected an agent missing from PATH to be rejected")
+	}
+	if data, _ := os.ReadFile(calls); strings.Contains(string(data), "tab create") {
+		t.Fatalf("no tab should be created:\n%s", data)
+	}
+}
+
 func TestCreateTabInWorkspaceOmitsEmptyCWD(t *testing.T) {
 	t.Setenv("HERDR_GO_TEST_HELPER", "1")
 	t.Setenv("HERDR_BIN_PATH", os.Args[0])
@@ -377,7 +421,7 @@ func TestPaletteUsesSharedRuntimeRows(t *testing.T) {
 	}
 }
 
-func TestPaletteOpensNewCodexPickerDetached(t *testing.T) {
+func TestPaletteOpensNewTabPickerDetached(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "herdr")
 	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$HERDR_TEST_SCRIPT_CALLS\"\nenv | sort >> \"$HERDR_TEST_SCRIPT_CALLS\"\n"), 0o700); err != nil {
 		t.Fatal(err)
@@ -406,7 +450,7 @@ func TestPaletteOpensNewCodexPickerDetached(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	got := string(data)
-	open := "new-codex open-picker picker\n"
+	open := "new popup codex\n"
 	if !strings.Contains(got, open) {
 		t.Fatalf("new Codex picker was not opened: %s", got)
 	}
@@ -433,7 +477,7 @@ func TestAllManifestsBuildAndRunGoRuntime(t *testing.T) {
 		"gitui-popup":           {`["./herdr-plugin", "gitui", "open"]`},
 		"herdr-ai-rename":       {`["./herdr-plugin", "rename", "ai-current"]`, `["./herdr-plugin", "rename", "picker"]`},
 		"herdr-move":            {`["./herdr-plugin", "move", "open"]`, `["./herdr-plugin", "move", "workspace"]`, `["./herdr-plugin", "move", "tab"]`},
-		"herdr-new":             {`["./herdr-plugin", "new-codex", "open"]`, `["./herdr-plugin", "new-codex", "open-tab"]`, `["./herdr-plugin", "new-codex", "claude"]`, `["./herdr-plugin", "new-codex", "picker"]`, `["./herdr-plugin", "new-codex", "tab-picker"]`, `["./herdr-plugin", "new-codex", "claude-picker"]`, `["./herdr-plugin", "new-codex", "close"]`},
+		"herdr-new":             {`["./herdr-plugin", "new", "open", "tab"]`, `["./herdr-plugin", "new", "open", "codex"]`, `["./herdr-plugin", "new", "open", "claude"]`, `["./herdr-plugin", "new", "open", "agent"]`, `["./herdr-plugin", "new", "picker", "tab"]`, `["./herdr-plugin", "new", "picker", "codex"]`, `["./herdr-plugin", "new", "picker", "claude"]`, `["./herdr-plugin", "new", "picker", "agent"]`, `["./herdr-plugin", "new", "close-codex"]`},
 		"herdr-duplicate":       {`["./herdr-plugin", "duplicate", "tab-or-agent"]`},
 		"herdr-copy":            {`["./herdr-plugin", "copy", "current-dir"]`, `["./herdr-plugin", "copy", "current-agent-session"]`, `["./herdr-plugin", "copy", "fork-current-agent-session-in-new-tab"]`, `["./herdr-plugin", "copy", "resume-current-agent-session-in-new-tab"]`, `["./herdr-plugin", "copy", "output"]`, `["./herdr-plugin", "copy", "command-and-output"]`, `["./herdr-plugin", "copy", "zoxide-directory"]`, `["./herdr-plugin", "zoxide", "picker"]`},
 		"mole-current-dir":      {`["./herdr-plugin", "mole", "open"]`},

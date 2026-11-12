@@ -61,23 +61,17 @@ func NewCommand() *cobra.Command {
 			}),
 			leaf("picker", func(ctx context.Context) error { return renamePicker(ctx, c) }),
 		),
-		group("new-codex",
-			leaf("open", func(ctx context.Context) error {
-				return invokeNewCodexPickerDetached(c, "picker")
+		group("new",
+			argument("open [kind]", newTabKinds, cobra.ExactArgs(1), func(ctx context.Context, kind string) error {
+				return invokeNewTabPickerDetached(c, kind)
 			}),
-			leaf("open-tab", func(ctx context.Context) error {
-				return invokeNewCodexPickerDetached(c, "tab-picker")
+			argument("popup [kind]", newTabKinds, cobra.ExactArgs(1), func(ctx context.Context, kind string) error {
+				return openNewTabPicker(ctx, c, kind)
 			}),
-			leaf("claude", func(ctx context.Context) error {
-				return invokeNewCodexPickerDetached(c, "claude-picker")
+			argument("picker [kind]", newTabKinds, cobra.ExactArgs(1), func(ctx context.Context, kind string) error {
+				return newTab(ctx, c, kind)
 			}),
-			argument("open-picker [entrypoint]", []string{"picker", "tab-picker", "claude-picker"}, cobra.ExactArgs(1), func(ctx context.Context, entrypoint string) error {
-				return openNewCodexPicker(ctx, c, entrypoint)
-			}),
-			leaf("picker", func(ctx context.Context) error { return newCodex(ctx, c) }),
-			leaf("tab-picker", func(ctx context.Context) error { return newPlainTab(ctx, c) }),
-			leaf("claude-picker", func(ctx context.Context) error { return newClaude(ctx, c) }),
-			leaf("close", func(ctx context.Context) error { return closeCodex(ctx, c) }),
+			leaf("close-codex", func(ctx context.Context) error { return closeCodex(ctx, c) }),
 		),
 		group("duplicate",
 			leaf("tab-or-agent", func(ctx context.Context) error { return duplicateTabOrAgent(ctx, c) }),

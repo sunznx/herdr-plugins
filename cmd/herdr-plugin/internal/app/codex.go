@@ -4,22 +4,88 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
+	sharedfzf "github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/fzf"
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/herdr"
 	"github.com/sunznx/herdr-plugins/cmd/herdr-plugin/internal/workspacepicker"
 )
+
+// newTabKinds are the herdr-new tab kinds; each has a "<kind>-picker" pane.
+var newTabKinds = []string{"tab", "codex", "claude", "agent"}
+
+func newTab(ctx context.Context, c herdr.Client, kind string) error {
+	switch kind {
+	case "tab":
+		return newPlainTab(ctx, c)
+	case "codex":
+		return newCodex(ctx, c)
+	case "claude":
+		return newClaude(ctx, c)
+	case "agent":
+		return newAgentTab(ctx, c)
+	}
+	return fmt.Errorf("unknown new tab kind %q", kind)
+}
 
 func newCodex(ctx context.Context, c herdr.Client) error {
 	paneID, scratch, err := newTabInWorkspace(ctx, c, "new Codex tab ▸ ", "HERDR_NEW_CODEX_CHOICE", "HERDR_NEW_CODEX_CANDIDATES_FILE")
 	if err != nil || paneID == "" {
 		return err
 	}
-	if _, err := c.Run(ctx, "pane", "run", paneID, "exec codex"); err != nil {
+	return startAgentInPane(ctx, c, paneID, "codex", scratch)
+}
+
+// newAgentTab picks an agent, then a workspace, and starts it in a new tab there.
+func newAgentTab(ctx context.Context, c herdr.Client) error {
+	kinds := []string{"codex"}
+	for _, kind := range append(supportedAgentKinds(ctx, c), "doubao") {
+		_, err := exec.LookPath(kind)
+		if !slices.Contains(kinds, kind) && (err == nil || len(agentInstallCommand(kind)) > 0) {
+			kinds = append(kinds, kind)
+		}
+	}
+	var rows strings.Builder
+	for _, kind := range kinds {
+		label := kind
+		if _, err := exec.LookPath(kind); err != nil {
+			label += " [未安装]"
+		}
+		fmt.Fprintf(&rows, "%s\t%s\n", kind, label)
+	}
+	kind := os.Getenv("HERDR_NEW_AGENT_KIND")
+	if kind == "" {
+		selected, err := sharedfzf.Pick(ctx, rows.String(), "--delimiter=\t", "--with-nth=2", "--prompt=new agent tab ▸ ", "--no-header", "--no-preview", "--reverse", "--cycle", "--no-multi", "--tiebreak=begin,index")
+		if err != nil || selected == "" {
+			return err
+		}
+		kind, _, _ = strings.Cut(selected, "\t")
+	}
+	if !slices.Contains(kinds, kind) {
+		return fmt.Errorf("unknown agent %q", kind)
+	}
+	if _, err := exec.LookPath(kind); err != nil {
+		if err := installAgent(ctx, kind); err != nil {
+			return err
+		}
+	}
+	paneID, scratch, err := newTabInWorkspace(ctx, c, "new "+kind+" tab ▸ ", "HERDR_NEW_AGENT_CHOICE", "HERDR_NEW_AGENT_CANDIDATES_FILE")
+	if err != nil || paneID == "" {
 		return err
 	}
-	if !scratch {
+	return startAgentInPane(ctx, c, paneID, kind, scratch)
+}
+
+// startAgentInPane runs an agent kind, whose name is its canonical executable.
+// Codex asks to trust each fresh scratch directory, so accept that prompt.
+func startAgentInPane(ctx context.Context, c herdr.Client, paneID, kind string, scratch bool) error {
+	if _, err := c.Run(ctx, "pane", "run", paneID, "exec "+kind); err != nil {
+		return err
+	}
+	if kind != "codex" || !scratch {
 		return nil
 	}
 	for range 100 {
@@ -42,18 +108,17 @@ func newPlainTab(ctx context.Context, c herdr.Client) error {
 }
 
 func newClaude(ctx context.Context, c herdr.Client) error {
-	paneID, _, err := newTabInWorkspace(ctx, c, "new Claude tab ▸ ", "HERDR_NEW_CLAUDE_CHOICE", "HERDR_NEW_CLAUDE_CANDIDATES_FILE")
+	paneID, scratch, err := newTabInWorkspace(ctx, c, "new Claude tab ▸ ", "HERDR_NEW_CLAUDE_CHOICE", "HERDR_NEW_CLAUDE_CANDIDATES_FILE")
 	if err != nil || paneID == "" {
 		return err
 	}
-	_, err = c.Run(ctx, "pane", "run", paneID, "exec claude")
-	return err
+	return startAgentInPane(ctx, c, paneID, "claude", scratch)
 }
 
-func openNewCodexPicker(ctx context.Context, c herdr.Client, entrypoint string) error {
+func openNewTabPicker(ctx context.Context, c herdr.Client, kind string) error {
 	deadline := time.Now().Add(5 * time.Second)
 	for {
-		err := c.OpenPane(ctx, "sunznx.herdr-new", entrypoint, true, "")
+		err := c.OpenPane(ctx, "sunznx.herdr-new", kind+"-picker", true, "")
 		if err == nil || !strings.Contains(err.Error(), `"code":"ui_busy"`) || time.Now().After(deadline) {
 			return err
 		}

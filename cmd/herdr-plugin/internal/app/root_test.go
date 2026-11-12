@@ -14,7 +14,8 @@ func TestCommandTree(t *testing.T) {
 		{"copy", "zoxide-directory"},
 		{"move", "open"}, {"move", "open-tab"}, {"move", "workspace"}, {"move", "tab"},
 		{"rename", "ai-current"}, {"rename", "ai-all"}, {"rename", "open", "pane-agent"}, {"rename", "picker"},
-		{"new-codex", "open"}, {"new-codex", "open-tab"}, {"new-codex", "claude"}, {"new-codex", "open-picker", "picker"}, {"new-codex", "picker"}, {"new-codex", "tab-picker"}, {"new-codex", "claude-picker"}, {"new-codex", "close"},
+		{"new", "open", "tab"}, {"new", "open", "codex"}, {"new", "open", "claude"}, {"new", "open", "agent"},
+		{"new", "popup", "codex"}, {"new", "popup", "agent"}, {"new", "picker", "tab"}, {"new", "picker", "codex"}, {"new", "picker", "claude"}, {"new", "picker", "agent"}, {"new", "close-codex"},
 		{"duplicate", "tab-or-agent"},
 		{"yazi", "open", "pick"}, {"yazi", "open", "fzf"}, {"yazi", "open", "rg"}, {"yazi", "picker"}, {"yazi", "browser", "fzf"},
 		{"palette", "open"}, {"palette", "run"},
@@ -36,14 +37,14 @@ func TestCommandTree(t *testing.T) {
 }
 
 func TestCommandTreeRejectsInvalidMode(t *testing.T) {
-	for _, mode := range []string{"invalid", "trellis"} {
+	for _, route := range [][]string{{"yazi", "open", "invalid"}, {"yazi", "open", "trellis"}, {"new", "open", "gemini"}, {"new", "open"}, {"new", "picker", "codex-picker"}} {
 		root := NewCommand()
-		cmd, args, err := root.Find([]string{"yazi", "open", mode})
+		cmd, args, err := root.Find(route)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if err := cmd.Args(cmd, args); err == nil {
-			t.Fatalf("expected mode %q to be rejected", mode)
+			t.Fatalf("expected %v to be rejected", route)
 		}
 	}
 }

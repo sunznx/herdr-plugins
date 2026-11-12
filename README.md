@@ -15,7 +15,7 @@ Personal [Herdr](https://herdr.dev) plugins.
 | [herdr-duplicate](herdr-duplicate) | Creates a new tab and starts Codex when the current tab contains Codex. |
 | [mole-current-dir](mole-current-dir) | Opens a pane and runs `mole analyze .` in the triggering pane's directory. |
 | [open-in](open-in) | Opens the triggering pane's current directory in Emacs, IntelliJ IDEA, or Fork. |
-| [herdr-new](herdr-new) | Opens a new tab, Codex tab, or Claude tab through the workspace picker, including from the command palette. |
+| [herdr-new](herdr-new) | Opens tabs and agents through the workspace picker, including Doubao CLI, with Codex first and automatic installation for supported missing CLIs. |
 | [herdr-agent-sidebar](herdr-agent-sidebar) | Installs a compact, task-first layout for the Herdr Agent sidebar. |
 
 ### yazi-popup

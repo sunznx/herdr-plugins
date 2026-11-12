@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -290,14 +291,8 @@ func dispatchPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext
 	}
 	if kind == "plugin" {
 		recordUsage(ctx, c, "plugin:"+payload)
-		if payload == "sunznx.herdr-new.codex" || payload == "sunznx.herdr-new.tab" || payload == "sunznx.herdr-new.claude" {
-			entrypoint := "picker"
-			if payload == "sunznx.herdr-new.tab" {
-				entrypoint = "tab-picker"
-			} else if payload == "sunznx.herdr-new.claude" {
-				entrypoint = "claude-picker"
-			}
-			return invokeNewCodexPickerDetached(c, entrypoint)
+		if kind, ok := strings.CutPrefix(payload, "sunznx.herdr-new."); ok && slices.Contains(newTabKinds, kind) {
+			return invokeNewTabPickerDetached(c, kind)
 		}
 		if payload == "sunznx.herdr-copy.fork-current-agent-session-in-new-tab" || payload == "sunznx.herdr-copy.resume-current-agent-session-in-new-tab" {
 			paneID := state.OriginPane
@@ -473,8 +468,8 @@ func dispatchPalette(ctx context.Context, c herdr.Client, pc herdr.TargetContext
 	return err
 }
 
-func invokeNewCodexPickerDetached(c herdr.Client, entrypoint string) error {
-	return invokeDetached(c, "new-codex", "open-picker", entrypoint)
+func invokeNewTabPickerDetached(c herdr.Client, kind string) error {
+	return invokeDetached(c, "new", "popup", kind)
 }
 
 func invokeDetached(c herdr.Client, args ...string) error {
@@ -658,15 +653,20 @@ func pickAgent(ctx context.Context, agents []agentRow) (string, error) {
 	}
 	return nestedPick(ctx, rows.String(), "agent ▸ ")
 }
-func paletteStartAgent(ctx context.Context, c herdr.Client, pc herdr.TargetContext) error {
+
+// supportedAgentKinds reads Herdr's agent kinds, which are also their executables.
+func supportedAgentKinds(ctx context.Context, c herdr.Client) []string {
 	out, _ := c.Run(ctx, "completion", "zsh")
 	re := regexp.MustCompile(`--kind\[Supported agent kind[^()]*\(([^)]*)\)`)
-	kinds := []string{"claude", "codex", "gemini", "cursor", "opencode", "copilot", "amp", "droid"}
 	if match := re.FindStringSubmatch(string(out)); len(match) > 1 {
-		kinds = strings.Fields(match[1])
+		return strings.Fields(match[1])
 	}
+	return []string{"claude", "codex", "gemini", "cursor", "opencode", "copilot", "amp", "droid"}
+}
+
+func paletteStartAgent(ctx context.Context, c herdr.Client, pc herdr.TargetContext) error {
 	var rows strings.Builder
-	for _, kind := range kinds {
+	for _, kind := range supportedAgentKinds(ctx, c) {
 		fmt.Fprintf(&rows, "%s\t%s\n", kind, kind)
 	}
 	kind, err := nestedPick(ctx, rows.String(), "agent kind ▸ ")
@@ -681,7 +681,7 @@ func paletteStartAgent(ctx context.Context, c herdr.Client, pc herdr.TargetConte
 	if pc.CWD != "" {
 		args = append(args, "--cwd", pc.CWD)
 	}
-	out, err = c.Run(ctx, args...)
+	out, err := c.Run(ctx, args...)
 	if err != nil {
 		return err
 	}

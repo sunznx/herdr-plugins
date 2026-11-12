@@ -1,45 +1,47 @@
 id = "sunznx.herdr-new"
 name = "Herdr New"
-version = "0.1.8"
+version = "0.2.2"
 min_herdr_version = "0.8.0"
-description = "Choose a workspace and open a new tab, Codex tab, or Claude tab."
+description = "Open tabs and agents, including Doubao CLI, with Codex first and automatic installation for supported missing CLIs."
 platforms = ["macos"]
 
 [[build]]
 command = ["go", "build", "-trimpath", "-o", "herdr-plugin", "../cmd/herdr-plugin"]
 
 [[actions]]
-id = "codex"
-title = "New Codex tab in workspace"
-contexts = ["workspace"]
-command = ["./herdr-plugin", "new-codex", "open"]
-
-[[actions]]
 id = "tab"
 title = "New tab in workspace"
+description = "Choose a workspace and open a new tab."
 contexts = ["workspace"]
-command = ["./herdr-plugin", "new-codex", "open-tab"]
+command = ["./herdr-plugin", "new", "open", "tab"]
+
+[[actions]]
+id = "codex"
+title = "New Codex tab in workspace"
+description = "Choose a workspace and open a new Codex tab."
+contexts = ["workspace"]
+command = ["./herdr-plugin", "new", "open", "codex"]
 
 [[actions]]
 id = "claude"
 title = "New Claude tab in workspace"
 description = "Choose a workspace and open a new Claude tab."
 contexts = ["workspace"]
-command = ["./herdr-plugin", "new-codex", "claude"]
+command = ["./herdr-plugin", "new", "open", "claude"]
 
 [[actions]]
-id = "herdr-close-codex"
-title = "Archive and close Codex pane"
-contexts = ["pane"]
-command = ["./herdr-plugin", "new-codex", "close"]
+id = "agent"
+title = "New Agent tab in workspace"
+description = "Choose an agent, including Doubao CLI, and automatically install supported missing CLIs."
+contexts = ["workspace"]
+command = ["./herdr-plugin", "new", "open", "agent"]
 
-[[panes]]
-id = "picker"
-title = "New Codex tab in workspace"
-placement = "popup"
-width = 64
-height = 20
-command = ["./herdr-plugin", "new-codex", "picker"]
+[[actions]]
+id = "close-codex"
+title = "Archive and close Codex pane"
+description = "Interrupt Codex if it is busy, archive the session, then close this pane."
+contexts = ["pane"]
+command = ["./herdr-plugin", "new", "close-codex"]
 
 [[panes]]
 id = "tab-picker"
@@ -47,7 +49,15 @@ title = "New tab in workspace"
 placement = "popup"
 width = 64
 height = 20
-command = ["./herdr-plugin", "new-codex", "tab-picker"]
+command = ["./herdr-plugin", "new", "picker", "tab"]
+
+[[panes]]
+id = "codex-picker"
+title = "New Codex tab in workspace"
+placement = "popup"
+width = 64
+height = 20
+command = ["./herdr-plugin", "new", "picker", "codex"]
 
 [[panes]]
 id = "claude-picker"
@@ -55,4 +65,12 @@ title = "New Claude tab in workspace"
 placement = "popup"
 width = 64
 height = 20
-command = ["./herdr-plugin", "new-codex", "claude-picker"]
+command = ["./herdr-plugin", "new", "picker", "claude"]
+
+[[panes]]
+id = "agent-picker"
+title = "New Agent tab in workspace"
+placement = "popup"
+width = 64
+height = 20
+command = ["./herdr-plugin", "new", "picker", "agent"]
